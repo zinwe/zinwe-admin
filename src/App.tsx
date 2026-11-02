@@ -23,9 +23,15 @@ import { BlogSubscribersPage } from "./pages/BlogSubscribersPage";
 import { BlogSeriesPage } from "./pages/BlogSeriesPage";
 import { BlogGuidesPage } from "./pages/BlogGuidesPage";
 import { LogsPage } from "./pages/LogsPage";
-import { AudiencePage } from "./pages/marketing/AudiencePage";
-import { EmailCampaignPage } from "./pages/marketing/EmailCampaignPage";
+import { CampaignPage } from "./pages/marketing/CampaignPage";
+import { CampaignsPage } from "./pages/marketing/CampaignsPage";
 import { FunnelPage } from "./pages/marketing/FunnelPage";
+import { NewCampaignPage } from "./pages/marketing/NewCampaignPage";
+import { PersonaListPage } from "./pages/marketing/PersonaListPage";
+import { PersonaPage } from "./pages/marketing/PersonaPage";
+import { TargetAudiencePage } from "./pages/marketing/TargetAudiencePage";
+import { TemplateEditorPage } from "./pages/marketing/TemplateEditorPage";
+import { TemplatesPage } from "./pages/marketing/TemplatesPage";
 
 // Documentation tab: only the viewer is in the bundle. The pages come from the staff-only API (see pages/DocsPage.tsx).
 const DocsPage = lazy(() => import("./pages/DocsPage"));
@@ -86,8 +92,18 @@ export function App(): ReactElement {
             <Route path="/releases" element={<ReleasesPage />} />
             <Route path="/marketing" element={<Navigate to="/marketing/funnel" replace />} />
             <Route path="/marketing/funnel" element={<FunnelPage />} />
-            <Route path="/marketing/audience" element={<AudiencePage />} />
-            <Route path="/marketing/email" element={<EmailCampaignPage />} />
+            <Route path="/marketing/audience" element={<Navigate to="/marketing/persona" replace />} />
+            <Route path="/marketing/persona" element={<PersonaListPage />} />
+            <Route path="/marketing/persona/:id" element={<PersonaPage />} />
+            <Route path="/marketing/persona/:id/audiences/new" element={<TargetAudiencePage />} />
+            <Route path="/marketing/persona/:id/audiences/:aid" element={<TargetAudiencePage />} />
+            <Route path="/marketing/templates" element={<Navigate to="/marketing/email/templates" replace />} />
+            <Route path="/marketing/email/templates" element={<TemplatesPage />} />
+            <Route path="/marketing/email/templates/new" element={<TemplateEditorPage />} />
+            <Route path="/marketing/email/templates/:tid" element={<TemplateEditorPage />} />
+            <Route path="/marketing/email" element={<CampaignsPage />} />
+            <Route path="/marketing/email/new" element={<NewCampaignPage />} />
+            <Route path="/marketing/email/:id" element={<CampaignPage />} />
             <Route path="/announcements" element={<AnnouncementsPage />} />
             <Route path="/pricing" element={<PricingPage />} />
             <Route path="/whats-new" element={<ReleaseNotesPage />} />

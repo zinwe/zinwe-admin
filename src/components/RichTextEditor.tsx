@@ -17,6 +17,10 @@ const EMAIL_TOOLBAR = [
   ["link", "clean"],
 ];
 
+/** Outreach: a personal note, so no headings or quotes. Pasting can't bring in anything else (`NOTE_FORMATS`). */
+const NOTE_TOOLBAR = [["bold", "italic", "underline"], [{ list: "ordered" }, { list: "bullet" }], ["link", "clean"]];
+const NOTE_FORMATS = ["bold", "italic", "underline", "list", "link"];
+
 /** Article: headings, code and images too (z_blog's allow-list matches this). */
 const ARTICLE_TOOLBAR = [
   [{ header: [2, 3, 4, false] }],
@@ -38,6 +42,7 @@ export function RichTextEditor({
   initialHtml,
   variant = "email",
   onImageUpload,
+  inserts,
 }: {
   onChange: (value: RichTextValue) => void;
   placeholder?: string;
@@ -45,12 +50,15 @@ export function RichTextEditor({
   label: string;
   /** Content to start with (read once, on mount). */
   initialHtml?: string;
-  /** "email" (default) or "article" (headings, code, images). */
-  variant?: "email" | "article";
+  /** "email" (default), "note" (outreach: simple formatting only) or "article" (headings, code, images). */
+  variant?: "email" | "note" | "article";
   /** Article images: upload the picked file and return its URL (inserted at the cursor). */
   onImageUpload?: (file: File) => Promise<string>;
+  /** Buttons that type a piece of text at the cursor, such as {{FirstName}}. */
+  inserts?: { label: string; text: string }[];
 }): ReactElement {
   const host = useRef<HTMLDivElement>(null);
+  const editor = useRef<Quill | null>(null);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
   const uploadRef = useRef(onImageUpload);
@@ -61,10 +69,11 @@ export function RichTextEditor({
     if (!el) return;
     const editorDiv = document.createElement("div");
     el.appendChild(editorDiv);
-    const toolbar = variant === "article" ? ARTICLE_TOOLBAR : EMAIL_TOOLBAR;
+    const toolbar = variant === "article" ? ARTICLE_TOOLBAR : variant === "note" ? NOTE_TOOLBAR : EMAIL_TOOLBAR;
     const quill = new Quill(editorDiv, {
       theme: "snow",
       placeholder,
+      ...(variant === "note" ? { formats: NOTE_FORMATS } : {}),
       modules: {
         toolbar: {
           container: toolbar,
@@ -94,6 +103,7 @@ export function RichTextEditor({
         },
       },
     });
+    editor.current = quill;
     quill.root.setAttribute("aria-label", label);
     quill.root.setAttribute("aria-multiline", "true");
     quill.root.setAttribute("role", "textbox");
@@ -102,7 +112,8 @@ export function RichTextEditor({
       onChangeRef.current({ html: quill.getSemanticHTML().replace(/&nbsp;/g, " "), text: quill.getText().trim() });
     quill.on("text-change", emit);
     if (initialHtml) {
-      quill.clipboard.dangerouslyPasteHTML(initialHtml, "silent");
+      // Not dangerouslyPasteHTML: it selects the start of the text, which pulls keyboard focus into the editor on load.
+      quill.setContents(quill.clipboard.convert({ html: initialHtml }), "silent");
       emit();
     }
     return () => {
@@ -113,5 +124,22 @@ export function RichTextEditor({
     // initialHtml is read once on purpose: callers remount (new key) to load other content.
   }, [placeholder, label, variant]);
 
-  return <div className={"rte" + (variant === "article" ? " rte--article" : "")} ref={host} />;
+  const insert = (text: string) => {
+    const quill = editor.current;
+    if (!quill) return;
+    const at = quill.getSelection(true)?.index ?? quill.getLength() - 1;
+    quill.insertText(at, text, "user");
+    quill.setSelection(at + text.length, 0);
+  };
+  const box = <div className={"rte" + (variant === "article" ? " rte--article" : "")} ref={host} />;
+  if (!inserts?.length) return box;
+  return (
+    <div>
+      {box}
+      <div className="rte__inserts" role="group" aria-label="Insert a detail">
+        <span>Insert:</span>
+        {inserts.map((i) => <button key={i.label} type="button" className="btn sm" onClick={() => insert(i.text)}>{i.label}</button>)}
+      </div>
+    </div>
+  );
 }

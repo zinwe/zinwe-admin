@@ -1,5 +1,6 @@
 /** Marketing reference content: segments, suggestions and the copy brief. Only features that ship today. */
-import type { Audience, ChipKey, Confidence } from "../../lib/marketingApi";
+import type { Audience, BusinessType, Confidence, Objective, Persona } from "../../lib/marketingApi";
+import { formOf, personaBriefLines, rowsOf } from "./persona";
 
 const S_USB = "Alerts when files are copied to a USB drive";
 const S_RULE = "Allow, read-only or block for USB drives";
@@ -12,14 +13,35 @@ const S_CHAT = "Owner-to-employee chat on the PC widget";
 const S_SEEN = "Ready-made notes with sent, delivered and seen status";
 
 export const COUNTRIES = ["USA", "India"];
-export const CHANNELS = ["LinkedIn", "Email", "WhatsApp", "Facebook", "Instagram", "YouTube", "Google search"];
-export const GOALS = ["Get free plan signups", "Get first PC installed", "Move free users to paid"];
-export const THEMES: [string, string, string][] = [
-  ["IT Is OK", "Calm, no blame", "You don’t have to know everything to take a first step."],
-  ["The Last File", "One file, one story", "What was the last file to leave your firm?"],
-  ["Identity Under Attack", "Who is really asking", "Would your team spot a stranger asking for access?"],
-  ["Safe by Design", "Simple rules first", "One small rule can prevent a big problem."],
-];
+export const CHANNELS = ["Email", "LinkedIn", "Google Ads", "Meta Ads", "SEO", "Instagram", "Facebook", "YouTube", "WhatsApp"];
+export const BUSINESS_TYPES = ["B2B", "B2C", "Both"] as const;
+export const BUSINESS_TYPE_TEXT: Record<BusinessType, [string, string]> = {
+  B2B: ["Other businesses", "B2B"],
+  B2C: ["The public", "B2C"],
+  Both: ["Both", "B2B and B2C"],
+};
+/** Named by what the person does, in funnel order, so no two read alike. The stored values stay as they are. */
+export const OBJECTIVES: Objective[] = ["Brand Awareness", "Enquiries", "Leads", "Sales"];
+export const OBJECTIVE_TEXT: Record<Objective, [string, string]> = {
+  "Brand Awareness": ["Awareness", "They get to know Zinwe"],
+  Enquiries: ["Conversations", "They reply or contact us"],
+  Leads: ["Free signups", "They create a free account"],
+  Sales: ["Paid plans", "They buy or upgrade"],
+};
+export const STATES: Record<string, string[]> = {
+  USA: [
+    "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado", "Connecticut", "Delaware", "Florida", "Georgia", "Hawaii", "Idaho",
+    "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana", "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota",
+    "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada", "New Hampshire", "New Jersey", "New Mexico", "New York", "North Carolina",
+    "North Dakota", "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island", "South Carolina", "South Dakota", "Tennessee", "Texas",
+    "Utah", "Vermont", "Virginia", "Washington", "West Virginia", "Wisconsin", "Wyoming",
+  ],
+  India: [
+    "Andhra Pradesh", "Assam", "Bihar", "Chandigarh", "Chhattisgarh", "Delhi", "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jammu and Kashmir",
+    "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Odisha", "Puducherry", "Punjab", "Rajasthan", "Tamil Nadu", "Telangana",
+    "Uttar Pradesh", "Uttarakhand", "West Bengal",
+  ],
+};
 
 export const SEGMENTS: [string, string, string][] = [
   ["CPA and accounting firms", "Client files leaving with staff", "One-PC USB test for client files"],
@@ -30,7 +52,7 @@ export const SEGMENTS: [string, string, string][] = [
   ["Design studios", "Instructions lost in calls and group chats", "Team chat on one PC widget"],
 ];
 
-type Library = Partial<Record<ChipKey, string[]>>;
+type Library = { problems?: string[]; solutions?: string[]; offers?: string[]; triggers?: string[]; words?: string[]; objections?: string[]; not_for?: string[] };
 
 const LIBRARY: Library[] = [
   {
@@ -93,8 +115,17 @@ const COMMON: Library = {
   not_for: ["Firms with their own IT team", "Anyone who wants to watch staff without telling them", "Offices that only use Mac or Linux"],
 };
 
-function suggestChannels(seg: number, country: string): string[] {
+export const lc1 = (s: string): string => (/^[A-Z][a-z]/.test(s) ? s.charAt(0).toLowerCase() + s.slice(1) : s);
+
+const split = (text: string | undefined): string[] => (text ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+
+export type Groups = [string, string[]][];
+
+/** Channels worth starting with, for the category picked. */
+export function suggestedChannels(category: string, country: string): string[] {
   const us = country === "USA";
+  const seg = SEGMENTS.findIndex((x) => x[0] === category);
+  if (seg < 0) return [];
   return [
     ["LinkedIn", us ? "Email" : "WhatsApp"],
     ["LinkedIn", "Instagram"],
@@ -105,23 +136,42 @@ function suggestChannels(seg: number, country: string): string[] {
   ][seg];
 }
 
-export const lc1 = (s: string): string => (/^[A-Z][a-z]/.test(s) ? s.charAt(0).toLowerCase() + s.slice(1) : s);
-
-/** Suggestion groups for a chip field, matched to the segments already picked. */
-export function suggestions(key: ChipKey, d: Audience): [string, string[]][] {
-  const known = d.segments.map((s) => SEGMENTS.findIndex((x) => x[0] === s)).filter((i) => i >= 0);
-  if (key === "segments") return [["Segments", SEGMENTS.map((s) => s[0])]];
-  if (key === "channels") {
-    const rec = known.flatMap((i) => suggestChannels(i, d.country));
-    return [...(rec.length ? ([["Suggested for this audience", rec]] as [string, string[]][]) : []), ["All channels", CHANNELS]];
+/** Suggestions for one field: what fits the category first, then what the persona already knows. */
+export function suggest(field: string, d: Audience, p: Persona): Groups {
+  const seg = LIBRARY[SEGMENTS.findIndex((x) => x[0] === d.business_category)];
+  const forSeg = (list?: string[]): Groups => (seg && list ? [[`For ${lc1(d.business_category)}`, list]] : []);
+  const pains = rowsOf(p, "pains");
+  const fromPersona = (list: string[]): Groups => (list.length ? [["From the persona", list]] : []);
+  const anyBusiness = (list?: string[]): Groups => (list ? [["For any small business", list]] : []);
+  switch (field) {
+    case "state":
+      return STATES[d.country] ? [["States", STATES[d.country]]] : [];
+    case "business_category":
+      return [["Categories", SEGMENTS.map((s) => s[0])]];
+    case "business_segment":
+      return [["By size", ["Firms of 5–15 people", "Firms of 15–50 people", "Owner-run startups", "Growing teams"]]];
+    case "primary_problem":
+    case "secondary_problem":
+      return [...forSeg(seg?.problems), ...fromPersona(pains.map((r) => r.pain).filter(Boolean)), ...anyBusiness(COMMON.problems)];
+    case "how_solves":
+      return [...forSeg(seg?.solutions), ...fromPersona(pains.map((r) => r.solution).filter(Boolean)), ...anyBusiness(COMMON.solutions)];
+    case "key_benefits":
+      return [...fromPersona(pains.map((r) => r.benefit).filter(Boolean)), ...forSeg(seg?.solutions)];
+    case "primary_offer":
+      return [...forSeg(seg?.offers), ...fromPersona(split(formOf(p, "email").offer)), ...anyBusiness(COMMON.offers)];
+    case "cta":
+      return [["Common", ["Try it on one PC", "Start free", "Reply yes", "See plans", "Contact us"]]];
+    case "job_titles":
+      return fromPersona(split(formOf(p, "email").titles));
+    case "decision_makers":
+      return fromPersona(split(formOf(p, "icp_b2b").designation));
+    case "industry_keywords":
+      return [...forSeg(seg?.words), ...fromPersona([...split(formOf(p, "keywords").primary), ...split(formOf(p, "keywords").industry)])];
+    case "competitors":
+      return fromPersona(split(formOf(p, "business").competitors));
+    default:
+      return [];
   }
-  const groups: [string, string[]][] = [];
-  for (const i of known) {
-    const list = LIBRARY[i][key];
-    if (list) groups.push([`For ${lc1(SEGMENTS[i][0])}`, list]);
-  }
-  groups.push(["For any small business", COMMON[key] ?? []]);
-  return groups;
 }
 
 export const CONFIDENCE: Record<Confidence, [string, string]> = {
@@ -130,67 +180,94 @@ export const CONFIDENCE: Record<Confidence, [string, string]> = {
   Confirmed: ["good", "Confirmed by several real people"],
 };
 
-export const blankAudience = (): Audience => ({
-  name: "", country: "USA", decider: "", setup: "", today: "", confidence: "Guess", segments: [], triggers: [], words: [],
-  objections: [], not_for: [], problems: [], solutions: [], offers: [], channels: [], summary: "",
-});
-
-const joinAnd = (a: string[]) => (a.length < 2 ? a.join("") : `${a.slice(0, -1).join(", ")} and ${a[a.length - 1]}`);
-
-export function audienceSummary(d: Audience): string {
-  const s: string[] = [];
-  const place = d.country === "USA" ? "the USA" : d.country;
-  if (d.segments.length) s.push(`This audience covers ${joinAnd(d.segments.map(lc1))} in ${place}.`);
-  if (d.decider.trim()) s.push(`The person who decides is ${lc1(d.decider.trim())}${d.setup.trim() ? `, and ${lc1(d.setup.trim())} sets it up` : ""}.`);
-  if (d.triggers.length) s.push(`Best moments to reach them: ${joinAnd(d.triggers.map(lc1))}.`);
-  if (d.problems.length) s.push(`${d.problems.length > 1 ? "Their main problems are" : "Their main problem is"} ${joinAnd(d.problems.map(lc1))}.`);
-  if (d.solutions.length) s.push(`Zinwe offers ${joinAnd(d.solutions.map(lc1))}.`);
-  if (d.offers.length) s.push(`${d.offers.length > 1 ? "Best offers" : "Best offer"}: ${joinAnd(d.offers)}.`);
-  if (d.channels.length) s.push(`Reach them first on ${d.channels[0]}${d.channels.length > 1 ? `, then on ${joinAnd(d.channels.slice(1))}` : ""}.`);
-  return s.join(" ");
+/** A new audience starts from its persona: product, offer, call to action and titles carry over, ready to change. */
+export function blankAudience(p: Persona): Audience {
+  const business = formOf(p, "business");
+  const email = formOf(p, "email");
+  const goal = formOf(p, "definition").goal;
+  return {
+    persona: p.id as number, name: "", country: "USA", state: "", city: "", business_category: "", business_segment: "",
+    business_type: business.model === "B2B2C" ? "Both" : business.model === "B2C" || business.model === "D2C" ? "B2C" : "B2B",
+    primary_problem: "", secondary_problem: "", product_service: business.product ?? "", how_solves: "", key_benefits: [],
+    primary_offer: email.offer ?? "", pricing: (business.pricing ?? "").slice(0, 240),
+    objective: goal === "Purchase" || goal === "Subscription" ? "Sales" : goal === "Demo" || goal === "Consultation" ? "Enquiries" : "Leads",
+    cta: email.cta ?? "", job_titles: split(email.titles), decision_makers: [], industry_keywords: [], competitors: [], notes: "", channels: [],
+  };
 }
 
-export function audienceBrief(d: Audience): string {
-  const L = [`Audience brief: ${d.name || "New audience"}`, "", `Country: ${d.country}`];
-  if (d.segments.length) L.push(`Segments: ${d.segments.join(", ")}`);
-  const list = (t: string, a: string[]) => {
-    if (a.length) L.push("", t, ...a.map((v) => `- ${v}`));
+export const place = (a: Pick<Audience, "city" | "state" | "country">): string => [a.city, a.state, a.country].filter(Boolean).join(", ");
+
+const ABOUT_ZINWE = [
+  "About Zinwe:",
+  "Zinwe by SKYTECHNO is data protection and activity monitoring for small businesses of 5–50 people with no IT department. A small agent on each employee's Windows PC gives the owner plain-English alerts. It is consent-first: employees see the Zinwe widget and agree to a notice on their own PC.",
+  "", "When you answer:",
+  "- Write for a busy owner who is not technical, in short plain sentences.",
+  '- Say "protect company data" and "know what left". Never use spying or catching language.',
+  "- Zinwe runs on Windows only today. It does not read messages, record screens or log keystrokes.",
+  "- Do not invent numbers, reviews or customer names.",
+  "- Do not quote prices or PC limits. Point to zinwe.io/plans.",
+  "- No legal or compliance claims.",
+  "", "My question:", "",
+];
+
+export function personaBrief(p: Persona): string {
+  return [`Persona brief: ${p.name || "New persona"} (${CONFIDENCE[p.confidence][1]})`, "", ...personaBriefLines(p), "", ...ABOUT_ZINWE].join("\n");
+}
+
+export function audienceBrief(d: Audience, p: Persona): string {
+  const L = [`Target audience brief: ${d.name || "New audience"}`, "", `Location: ${place(d)}`];
+  const line = (label: string, value: string) => {
+    if (value.trim()) L.push(`${label}: ${value.trim()}`);
   };
-  if (d.decider.trim() || d.setup.trim() || d.today.trim() || d.triggers.length || d.words.length || d.objections.length || d.not_for.length) {
-    L.push("", `Main persona (${CONFIDENCE[d.confidence][1]}):`);
-    if (d.decider.trim()) L.push(`Who decides: ${d.decider.trim()}`);
-    if (d.setup.trim()) L.push(`Who sets it up: ${d.setup.trim()}`);
-    if (d.today.trim()) L.push(`What they do today: ${d.today.trim()}`);
-    list("Trigger moments:", d.triggers);
-    list("Words they use:", d.words);
-    list("Objections:", d.objections);
-    list("Not for:", d.not_for);
+  const list = (title: string, items: string[]) => {
+    if (items.length) L.push("", title, ...items.map((v) => `- ${v}`));
+  };
+  line("Business category", d.business_category);
+  line("Business segment", d.business_segment);
+  line("Business type", d.business_type);
+  L.push("");
+  line("Primary problem", d.primary_problem);
+  line("Secondary problem", d.secondary_problem);
+  line("Product or service", d.product_service);
+  line("How it solves the problem", d.how_solves);
+  list("Key benefits:", d.key_benefits);
+  L.push("");
+  line("Primary offer", d.primary_offer);
+  line("Pricing", d.pricing);
+  line("Campaign objective", `${OBJECTIVE_TEXT[d.objective][0]} (${OBJECTIVE_TEXT[d.objective][1].toLowerCase()})`);
+  line("Call to action", d.cta);
+  list("Target job titles:", d.job_titles);
+  list("Target decision makers:", d.decision_makers);
+  list("Industry keywords:", d.industry_keywords);
+  list("Competitor names:", d.competitors);
+  if (d.notes.trim()) L.push("", "Additional notes:", d.notes.trim());
+  const plans = rowsOf(p, "channels");
+  if (d.channels.length) {
+    L.push("", "Channels, best first:");
+    d.channels.forEach((c, i) => {
+      const plan = plans.find((r) => r.channel === c);
+      L.push(`${i + 1}. ${c}${plan?.strategy ? `: ${plan.strategy}` : ""}`);
+    });
   }
-  list("Problems they face:", d.problems);
-  list("Solutions we offer:", d.solutions);
-  list("Best offers for this segment:", d.offers);
-  if (d.channels.length) L.push("", "Best channels, in order:", ...d.channels.map((v, i) => `${i + 1}. ${v}`));
-  if (d.summary.trim()) L.push("", "Summary:", d.summary.trim());
-  L.push(
-    "", "About Zinwe:",
-    "Zinwe by SKYTECHNO is data protection and activity monitoring for small businesses of 5–50 people with no IT department. A small agent on each employee's Windows PC gives the owner plain-English alerts. It is consent-first: employees see the Zinwe widget and agree to a notice on their own PC.",
-    "", "When you answer:",
-    "- Write for a busy owner who is not technical, in short plain sentences.",
-    "- Use the words the persona uses, and open on a trigger moment where it fits.",
-    '- Say "protect company data" and "know what left". Never use spying or catching language.',
-    "- Zinwe runs on Windows only today. It does not read messages, record screens or log keystrokes.",
-    "- Do not invent numbers, reviews or customer names.",
-    "- Do not quote prices or PC limits. Point to zinwe.io/plans.",
-    "- No legal or compliance claims.",
-    "", "My question:", "",
-  );
+  const base = formOf(p, "definition");
+  L.push("", `Base persona: ${p.name} (${CONFIDENCE[p.confidence][1]})`);
+  line("Ideal customer", base.customer ?? "");
+  line("Primary message", base.message ?? "");
+  line("Biggest frustrations", formOf(p, "psychology").frustrations ?? "");
+  line("Trust factors", formOf(p, "psychology").trust ?? "");
+  L.push("", ...ABOUT_ZINWE);
   return L.join("\n");
 }
 
-export const CHANNEL_GUIDE = [
-  ["LinkedIn", "Owners and partners of B2B firms", "Personal messages and helpful posts", "You send every message yourself"],
-  ["Email", "Firms with a verified work email", "Step-by-step campaigns", "Unsubscribe and postal address in every email"],
-  ["WhatsApp", "Indian owners who already know you", "Short updates and setup help", "Only with their permission, no bulk cold messages"],
-  ["Facebook", "Local small business owners", "Posts, groups and ads", "Be useful first, avoid spamming groups"],
-  ["Instagram", "Visual businesses and studios", "Reels, stories and brand trust", "Use it for trust, not cold selling"],
-];
+/** What each channel suits and the rule that comes with it. */
+export const CHANNEL_GUIDE: Record<string, [string, string]> = {
+  Email: ["Firms with a verified work email", "Unsubscribe and postal address in every email"],
+  LinkedIn: ["Owners and partners of B2B firms", "You send every message yourself"],
+  "Google Ads": ["People searching for a fix right now", "The owner approves every ad and budget"],
+  "Meta Ads": ["Local owners by interest", "The owner approves every ad and budget"],
+  SEO: ["Owners searching a specific worry", "Useful articles only, no legal topics"],
+  Instagram: ["Visual businesses and studios", "Use it for trust, not cold selling"],
+  Facebook: ["Local small business owners", "Be useful first, avoid spamming groups"],
+  YouTube: ["The person who runs the setup", "How-tos first, no hard selling"],
+  WhatsApp: ["Indian owners who already know you", "Only with their permission, no bulk cold messages"],
+};
