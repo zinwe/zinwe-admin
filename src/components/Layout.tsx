@@ -6,7 +6,7 @@ import { useAdminEnv } from "../lib/env";
 import { BrandLogo, DevPill } from "./BrandLogo";
 import { Icon, type IconName } from "./icons";
 
-type BadgeKey = "payments_waiting" | "support_waiting" | "forms_new" | "feedback_unread" | "logs_attention";
+type BadgeKey = "payments_waiting" | "support_waiting" | "forms_new" | "feedback_unread" | "logs_attention" | "issues_new";
 
 interface NavItem {
   to: string;
@@ -41,6 +41,7 @@ const GROUPS: NavGroup[] = [
     label: "INBOX",
     items: [
       { to: "/support", label: "Support", icon: "support", badge: "support_waiting", badgeLabel: "waiting for an answer" },
+      { to: "/issues", label: "Issues", icon: "warn", badge: "issues_new", badgeLabel: "new" },
       { to: "/feedback", label: "Feedback", icon: "feedback", badge: "feedback_unread", badgeLabel: "unread" },
       { to: "/forms", label: "Forms", icon: "forms", badge: "forms_new", badgeLabel: "new" },
     ],

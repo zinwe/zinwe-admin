@@ -334,6 +334,48 @@ export async function fetchProof(paymentId: number): Promise<Blob> {
 export const getFeedback = () =>
   request<{ summary: FeedbackSummary; rows: FeedbackRow[] }>("/api/admin/feedback/");
 
+/** Issues owners report from the dashboard (Help → Report an issue), with an optional screenshot. */
+export type IssueStatus = "new" | "looking" | "fixed" | "closed";
+
+export interface IssueRow {
+  id: number;
+  description: string;
+  /** The dashboard page it happened on. */
+  page: string;
+  /** Browser details: url, viewport, screen, pixel_ratio, browser, platform, language, timezone, online. */
+  context: Record<string, string>;
+  /** They agreed to emails about this report. */
+  contact_ok: boolean;
+  status: IssueStatus;
+  reply: string;
+  replied_at: string | null;
+  resolved_at: string | null;
+  created_at: string;
+  customer: { id: number; email: string; full_name: string; company: string | null };
+  has_screenshot: boolean;
+}
+
+export const getIssues = () =>
+  request<{ counts: Record<IssueStatus, number>; rows: IssueRow[] }>("/api/admin/issues/");
+/** Fixed emails the owner (when they agreed): `email` is "" (none), "sent", or why it failed. */
+export const setIssueStatus = (id: number, status: IssueStatus) =>
+  request<IssueRow & { email: string }>(`/api/admin/issues/${id}/`, { method: "PATCH", body: JSON.stringify({ status }) });
+export const replyToIssue = (id: number, message: string) => post<IssueRow>(`/api/admin/issues/${id}/reply/`, { message });
+
+/** The screenshot sent with a report, fetched with the staff token (it's never public). */
+export async function fetchIssueScreenshot(id: number): Promise<Blob> {
+  const h = new Headers();
+  const token = getToken();
+  if (token) h.set("Authorization", `Token ${token}`);
+  const res = await fetch(`/api/auth/issues/${id}/screenshot/`, { headers: h });
+  if (res.status === 401) {
+    clearToken();
+    throw new ApiError("Your session has ended. Please sign in again.", 401);
+  }
+  if (!res.ok) throw new ApiError("The screenshot couldn't be loaded.", res.status);
+  return res.blob();
+}
+
 /** What needs the team now, for the sidebar badges. */
 export const getBadges = () =>
   request<{ payments_waiting: number; support_waiting: number; forms_new?: number; logs_attention?: number }>(
