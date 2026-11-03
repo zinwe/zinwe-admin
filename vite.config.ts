@@ -18,8 +18,8 @@ function zinweDocs(): Plugin {
   const findDocsDir = (start: string): string | null => {
     let dir = start;
     for (let i = 0; i < 6; i++) {
-      // `<project>/.claude/dev/docs` (the main folder holds only the apps); `.cloude/dev/docs` is the older name.
-      const candidates = [path.join(dir, ".claude", "dev", "docs"), path.join(dir, ".cloude", "dev", "docs")];
+      // `<project>/.claude/claude-worker/controller/dev/docs` since 2026-11-03; `.claude/dev/docs` and `.cloude/dev/docs` are older layouts.
+      const candidates = [path.join(dir, ".claude", "claude-worker", "controller", "dev", "docs"), path.join(dir, ".claude", "dev", "docs"), path.join(dir, ".cloude", "dev", "docs")];
       for (const candidate of candidates) {
         if (fs.existsSync(path.join(candidate, "00-overview.md"))) return candidate;
       }
