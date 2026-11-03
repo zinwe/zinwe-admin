@@ -9,6 +9,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { FeedbackPage } from "./pages/FeedbackPage";
 import { IssuesPage } from "./pages/IssuesPage";
+import { NewVersionPage } from "./pages/NewVersionPage";
 import { SubscribersPage } from "./pages/SubscribersPage";
 import { SupportPage } from "./pages/SupportPage";
 import { FormsPage } from "./pages/FormsPage";
@@ -90,6 +91,7 @@ export function App(): ReactElement {
             <Route path="/subscriptions" element={<SubscriptionsPage />} />
             <Route path="/feedback" element={<FeedbackPage />} />
             <Route path="/issues" element={<IssuesPage />} />
+            <Route path="/new-version" element={<NewVersionPage />} />
             <Route path="/support" element={<SupportPage />} />
             <Route path="/forms" element={<FormsPage />} />
             <Route path="/releases" element={<ReleasesPage />} />

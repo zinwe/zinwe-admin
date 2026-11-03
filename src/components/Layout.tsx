@@ -44,6 +44,8 @@ const GROUPS: NavGroup[] = [
       { to: "/issues", label: "Issues", icon: "warn", badge: "issues_new", badgeLabel: "new" },
       { to: "/feedback", label: "Feedback", icon: "feedback", badge: "feedback_unread", badgeLabel: "unread" },
       { to: "/forms", label: "Forms", icon: "forms", badge: "forms_new", badgeLabel: "new" },
+      // Weekly plan drafted from Issues + Feedback (z_versions), Thursday 3 AM.
+      { to: "/new-version", label: "New version", icon: "deploy" },
     ],
   },
   {
