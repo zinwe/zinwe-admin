@@ -42,7 +42,7 @@ function Editor({ t, onClose, onSaved }: { t: WaTemplate; onClose: () => void; o
     }
   };
   return (
-    <Modal title={t.id ? "Edit template" : "New template"} subtitle="Use {{FirstName}}, {{Business}} and {{City}}. Keep a first message under 400 characters." onClose={onClose}
+    <Modal title={t.id ? "Edit template" : "New template"} subtitle="Use {{FirstName}} (their name, or “Business team” when we don't know it), {{Business}}, {{City}} and {{HowWeKnow}} (“I found you on Google Maps, where you're rated 4.8.”). Keep a first message under 400 characters." onClose={onClose}
       footer={<><button type="button" className="btn" onClick={onClose}>Cancel</button><button type="button" className="btn dark" disabled={busy || !draft.name.trim() || !draft.text.trim()} onClick={() => void save()}>Save template</button></>}>
       <div className="mk mk-imp">
         <label className="fl">Name<input className="inp" value={draft.name} maxLength={120} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></label>

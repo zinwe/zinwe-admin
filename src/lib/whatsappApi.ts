@@ -46,6 +46,10 @@ export interface WaContact {
   first_sent: string | null;
   opted_in: boolean;
   opt_in_note: string;
+  /** How drafts address them: their first name when it clearly is one, else "<Business> team". */
+  greet_as: string;
+  /** The business name without SEO words, legal suffixes or fancy letters. */
+  short_name: string;
   messages?: WaMessage[];
 }
 

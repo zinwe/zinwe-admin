@@ -136,6 +136,22 @@ function OptIn({ c, run }: { c: WaContact; run: (work: () => Promise<WaContact |
   );
 }
 
+/** Most sheet "first names" are scraps of the business name, so drafts only use one that clearly is a person's. */
+function FirstName({ c, run }: { c: WaContact; run: (work: () => Promise<WaContact | null>, done: string) => Promise<void> }): ReactElement {
+  const [value, setValue] = useState(c.first_name);
+  const save = () => {
+    if (value.trim() !== c.first_name) void run(() => patchWaContact(c.id, { first_name: value.trim() }), "First name saved.");
+  };
+  return (
+    <div className="mk-sec">
+      <label className="fl">First name <span className="k">Leave empty if you don’t know their name</span>
+        <input className="inp" maxLength={80} value={value} onChange={(e) => setValue(e.target.value)} onBlur={save} onKeyDown={(e) => { if (e.key === "Enter") save(); }} />
+      </label>
+      <span className="k">Messages open with <b>Hi {c.greet_as},</b>{c.first_name && !c.greet_as.endsWith(" team") ? "" : c.first_name ? " because this doesn’t look like a person’s name." : ""}</span>
+    </div>
+  );
+}
+
 function ContactDrawer({ id, campaigns, onClose, onChanged }: { id: number; campaigns: WaCampaign[]; onClose: () => void; onChanged: () => void }): ReactElement {
   const toast = useToast();
   const [c, setC] = useState<WaContact | null>(null);
@@ -162,6 +178,7 @@ function ContactDrawer({ id, campaigns, onClose, onChanged }: { id: number; camp
         <div className="mk mk-drawer">
           <div className="fr"><WaPill s={c.status} />{c.opted_in ? null : <span className="pill">Not opted in</span>}{c.paused_until ? <span className="pill">Paused until {when(c.paused_until)}</span> : null}</div>
           <OptIn c={c} run={run} />
+          <FirstName c={c} run={run} />
           <dl>
             <dt>Segment</dt><dd>{c.segment}</dd>
             <dt>City</dt><dd>{c.city}, {c.country}</dd>
@@ -245,7 +262,7 @@ export function ContactsTab({ contacts, campaigns, reload }: { contacts: WaConta
             <tbody>
               {rows.map((c) => (
                 <tr key={c.id} className="click" onClick={() => setOpen(c.id)}>
-                  <th scope="row"><button type="button" className="cobtn" onClick={(e) => { e.stopPropagation(); setOpen(c.id); }}>{c.firm}</button><span className="k" style={{ display: "block" }}>{c.first_name || "—"} · {c.city}</span></th>
+                  <th scope="row"><button type="button" className="cobtn" onClick={(e) => { e.stopPropagation(); setOpen(c.id); }}>{c.short_name || c.firm}</button><span className="k" style={{ display: "block" }}>Hi {c.greet_as} · {c.city}</span></th>
                   <td className="num">{c.phone}</td>
                   <td>{c.segment}</td>
                   <td>{c.opted_in ? <WaPill s={c.status as WaStatus} /> : <span className="pill" title="Locked until they opt in">Not opted in</span>}</td>

@@ -14,10 +14,13 @@ export const KIND_LABEL: Record<WaKind, string> = {
 export const TRACK_LABEL: Record<WaTrack, string> = { "": "Every YES", data: "Data safety", day: "Team's day", chat: "Team chat" };
 /** Fills the placeholders with a sample business, for previews. */
 export const sampleText = (t: string, firm = "Gupta Exim", first = "Rakesh"): string =>
-  t.replace(/\{\{FirstName\}\}/g, first).replace(/\{\{(Firm|Business)\}\}/g, firm).replace(/\{\{City\}\}/g, "Noida");
+  t.replace(/\{\{FirstName\}\}/g, first).replace(/\{\{(Firm|Business)\}\}/g, firm).replace(/\{\{City\}\}/g, "Noida")
+    .replace(/\{\{HowWeKnow\}\}/g, "I found you on Google Maps, where you're rated 4.8.");
 export const WaPill = ({ s }: { s: WaStatus }): ReactElement => <span className={"pill " + WA_STATUS[s][1]}>{WA_STATUS[s][0]}</span>;
 export const errText = (err: unknown, fallback: string): string => (err instanceof ApiError ? err.message : fallback);
-export const nameOf = (c: Pick<WaContact, "first_name" | "info" | "firm">): string => c.info?.contact_name || c.first_name || c.firm;
+/** Who the contact is, as drafts greet them (see wa_names.py), so screens and messages agree. */
+export const nameOf = (c: Pick<WaContact, "first_name" | "info" | "firm"> & Partial<Pick<WaContact, "greet_as">>): string =>
+  c.greet_as || c.info?.contact_name || c.first_name || c.firm;
 export const initials = (s: string): string =>
   s.replace(/^Dr\.? /i, "").split(/\s+/).filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "?";
 export const when = (iso: string | null | undefined): string =>
