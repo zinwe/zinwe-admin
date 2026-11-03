@@ -38,6 +38,7 @@ export const ICON = {
   chevronRight: "M9 6l6 6-6 6",
   chevronLeft: "M15 6l-6 6 6 6",
   mail: "M3 6h18v12H3zM3 7l9 6 9-6",
+  chat: "M20 12a8 8 0 0 1-11.6 7.1L4 20l1-4.2A8 8 0 1 1 20 12zM9 10.5c.4 1.6 1.9 3.1 3.5 3.5l1-1 2 .8v1.4c-3.6.5-7.4-3.3-6.9-6.9H10l.8 2z",
   external: "M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5",
   trash: "M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13",
   edit: "M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16zM13.5 6.5l4 4",

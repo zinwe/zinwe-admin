@@ -51,6 +51,7 @@ const GROUPS: NavGroup[] = [
       { to: "/marketing/funnel", label: "Funnel", icon: "funnel" },
       { to: "/marketing/persona", label: "Persona", icon: "audience" },
       { to: "/marketing/email", label: "Email campaigns", icon: "mail" },
+      { to: "/marketing/whatsapp", label: "WhatsApp", icon: "chat" },
     ],
   },
   {

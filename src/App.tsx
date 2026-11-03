@@ -32,6 +32,7 @@ import { PersonaPage } from "./pages/marketing/PersonaPage";
 import { TargetAudiencePage } from "./pages/marketing/TargetAudiencePage";
 import { TemplateEditorPage } from "./pages/marketing/TemplateEditorPage";
 import { TemplatesPage } from "./pages/marketing/TemplatesPage";
+import { WhatsAppPage } from "./pages/marketing/whatsapp/WhatsAppPage";
 
 // Documentation tab: only the viewer is in the bundle. The pages come from the staff-only API (see pages/DocsPage.tsx).
 const DocsPage = lazy(() => import("./pages/DocsPage"));
@@ -104,6 +105,9 @@ export function App(): ReactElement {
             <Route path="/marketing/email" element={<CampaignsPage />} />
             <Route path="/marketing/email/new" element={<NewCampaignPage />} />
             <Route path="/marketing/email/:id" element={<CampaignPage />} />
+            <Route path="/marketing/whatsapp" element={<WhatsAppPage />} />
+            <Route path="/marketing/whatsapp/:tab" element={<WhatsAppPage />} />
+            <Route path="/marketing/whatsapp/:tab/:id" element={<WhatsAppPage />} />
             <Route path="/announcements" element={<AnnouncementsPage />} />
             <Route path="/pricing" element={<PricingPage />} />
             <Route path="/whats-new" element={<ReleaseNotesPage />} />

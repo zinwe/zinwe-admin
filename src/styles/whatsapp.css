@@ -1,0 +1,36 @@
+/* Marketing -> WhatsApp. Builds on .mk (marketing.css); page-only parts are scoped under .wa. */
+.wa .wa-count { font-style: normal; margin-left: 6px; padding: 0 6px; border-radius: 999px; background: var(--accent); color: var(--ink); font-size: 11px; font-weight: 700; }
+.wa .wa-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(380px, 100%), 1fr)); gap: 16px; align-items: start; }
+.wa .wa-item { display: flex; flex-direction: column; gap: 10px; padding: 14px 0; border-top: 1px solid var(--line-soft); }
+.wa .wa-item:first-of-type { border-top: 0; padding-top: 4px; }
+.wa .wa-who { display: flex; gap: 10px; align-items: flex-start; }
+.wa .wa-who b { display: block; }
+.wa .wa-av { flex: none; width: 34px; height: 34px; border-radius: 50%; background: var(--surface-2); display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; }
+.wa .wa-draft { display: flex; flex-direction: column; gap: 8px; }
+.wa .wa-draft textarea { width: 100%; padding: 8px 10px; line-height: 1.5; resize: vertical; }
+.wa .wa-by { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--accent-text); }
+.wa .wa-by::before { content: ""; width: 8px; height: 8px; border-radius: 2px; background: var(--accent); transform: rotate(45deg); }
+.wa .btn.wa-open { background: var(--accent); border-color: var(--accent); color: var(--ink); }
+.wa .btn.wa-open:hover { background: var(--accent-hover); }
+.wa .btn.wa-open[aria-disabled="true"] { pointer-events: none; opacity: .5; }
+.wa .chip.wa-stop { color: var(--danger); }
+.wa-chat { display: flex; flex-direction: column; gap: 6px; padding: 12px 10px; border-radius: 10px; background: #efeae2; }
+.wa-bub { max-width: 88%; align-self: flex-start; padding: 6px 9px 4px; border-radius: 8px; background: #fff; font-size: 13px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; box-shadow: 0 1px 0 rgba(0, 0, 0, .06); }
+.wa-bub.me { align-self: flex-end; background: #e7f6dd; }
+.wa-bub small { display: block; text-align: right; font-size: 10px; color: var(--ink-3); margin-top: 2px; }
+.wa .wa-goals { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; }
+.wa .wa-tgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr)); gap: 14px; }
+.wa .wa-tcard { display: flex; flex-direction: column; overflow: hidden; }
+.wa .wa-tcard header { padding: 12px 14px; display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+.wa .wa-tcard h3 { font-size: 14px; }
+.wa .wa-tcard .wa-chat { border-radius: 0; flex: 1; }
+.wa .wa-tcard footer { padding: 10px 14px; border-top: 1px solid var(--line-soft); }
+.wa .wa-rules { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.wa .wa-mode { padding: 12px 14px; border: 1px solid var(--line-2); border-radius: 10px; display: flex; flex-direction: column; gap: 4px; }
+.wa .wa-mode.on { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.wa .wa-mode.dashed { border-style: dashed; }
+.wa .wa-svg { display: block; width: 100%; height: auto; }
+.wa .wa-key { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; }
+.wa .wa-key i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.wa .wa-bar { display: grid; grid-template-columns: minmax(0, 150px) minmax(0, 1fr) 48px; gap: 10px; align-items: center; font-size: 13px; }
+.wa .wa-bar span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
