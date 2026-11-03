@@ -1,11 +1,35 @@
 import { useEffect, useState, type ReactElement } from "react";
 import { Link } from "react-router-dom";
-import { actOn, draftFor, logReply, markSent, waLink, type WaContact, type WaKind, type WaToday } from "../../../lib/whatsappApi";
+import {
+  actOn, draftFor, logReply, markSent, patchWaContact, waLink,
+  type WaContact, type WaKind, type WaSendKind, type WaToday, type WaTrack,
+} from "../../../lib/whatsappApi";
 import { useToast } from "../../../components/Toast";
-import { Bubble, errText, initials, nameOf } from "./shared";
+import { Bubble, errText, initials, KIND_LABEL, nameOf, TRACK_LABEL } from "./shared";
+
+/** Which after-YES sequence they get: picked from what they said matters most. */
+function TrackPicker({ c, onDone }: { c: WaContact; onDone: () => void }): ReactElement {
+  const toast = useToast();
+  const pick = async (track: WaTrack) => {
+    try {
+      await patchWaContact(c.id, { track });
+      toast(track ? `${TRACK_LABEL[track]} sequence chosen.` : "Only the messages every YES gets.");
+      onDone();
+    } catch (err) {
+      toast(errText(err, "Couldn't save that."), "bad");
+    }
+  };
+  return (
+    <label className="fl">After-YES sequence <span className="k">From what matters most to them</span>
+      <select className="inp" value={c.track} onChange={(e) => void pick(e.target.value as WaTrack)}>
+        {(Object.keys(TRACK_LABEL) as WaTrack[]).map((t) => <option key={t} value={t}>{t ? TRACK_LABEL[t] : "Not chosen yet"}</option>)}
+      </select>
+    </label>
+  );
+}
 
 /** One draft: Claude's (or the template's) text, editable, with Open in WhatsApp and Mark as sent. */
-function Draft({ c, kind, send, onDone }: { c: WaContact; kind: WaKind; send: "first" | "followup" | "reply"; onDone: () => void }): ReactElement {
+function Draft({ c, kind, send, onDone }: { c: WaContact; kind: WaKind; send: WaSendKind; onDone: () => void }): ReactElement {
   const toast = useToast();
   const [text, setText] = useState("");
   const [by, setBy] = useState("");
@@ -18,7 +42,7 @@ function Draft({ c, kind, send, onDone }: { c: WaContact; kind: WaKind; send: "f
       .catch((err) => toast(errText(err, "Couldn't draft this message."), "bad"))
       .finally(() => setBusy(false));
   };
-  useEffect(load, [c.id, kind]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(load, [c.id, kind, c.track]); // eslint-disable-line react-hooks/exhaustive-deps
   const sent = async () => {
     setBusy(true);
     try {
@@ -80,6 +104,7 @@ function Reply({ c, onDone }: { c: WaContact; onDone: () => void }): ReactElemen
         <button type="button" className={"chip" + (kind === "notnow" ? " on" : "")} onClick={() => void act("notnow")}>Not now</button>
         <button type="button" className="chip wa-stop" onClick={() => void act("stop")}>Stop, never again</button>
       </div>
+      {kind === "interested" ? <TrackPicker c={c} onDone={onDone} /> : null}
       <Draft c={c} kind={kind} send="reply" onDone={onDone} />
     </div>
   );
@@ -139,10 +164,11 @@ export function TodayTab({ data, contacts, reload }: { data: WaToday; contacts: 
           {data.replies.length ? data.replies.map((c) => <Reply key={c.id} c={c} onDone={reload} />) : <span className="k">No replies waiting.</span>}
         </section>
         <section className="card editor">
-          <div className="fighead"><h2>Messages to send</h2><span className="k">{data.queue.length} due in live campaigns</span></div>
+          <div className="fighead"><h2>Messages to send</h2><span className="k">{data.queue.length} due: after-YES steps first, then live campaigns</span></div>
           {data.queue.length ? data.queue.map((q) => (
-            <div key={q.contact.id} className="wa-item">
-              <Who c={q.contact} note={q.kind === "followup" ? "Follow-up" : "First message"} />
+            <div key={`${q.kind}-${q.contact.id}`} className="wa-item">
+              <Who c={q.contact} note={q.kind === "nurture" ? `After YES · ${q.template}` : KIND_LABEL[q.kind]} />
+              {q.kind === "nurture" ? <TrackPicker c={q.contact} onDone={reload} /> : null}
               <Draft c={q.contact} kind={q.kind} send={q.kind} onDone={reload} />
             </div>
           )) : <span className="k">Nothing due. Start a campaign in <Link to="/marketing/whatsapp/campaigns">Campaigns</Link>, or add contacts to a live one.</span>}

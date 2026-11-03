@@ -2,11 +2,11 @@ import { useState, type ReactElement } from "react";
 import { ConfirmDialog } from "../../../components/ConfirmDialog";
 import { Modal } from "../../../components/Modal";
 import { useToast } from "../../../components/Toast";
-import { deleteWaTemplate, saveWaTemplate, type WaKind, type WaTemplate } from "../../../lib/whatsappApi";
-import { Bubble, errText, KIND_LABEL } from "./shared";
+import { deleteWaTemplate, saveWaTemplate, type WaKind, type WaTemplate, type WaTrack } from "../../../lib/whatsappApi";
+import { Bubble, errText, KIND_LABEL, sampleText as sample, TRACK_LABEL } from "./shared";
 
 const KINDS = Object.keys(KIND_LABEL) as WaKind[];
-const sample = (t: string) => t.replace(/\{\{FirstName\}\}/g, "Rakesh").replace(/\{\{Firm\}\}/g, "Gupta Exim");
+const label = (t: WaTemplate) => (t.kind === "nurture" ? `After YES · ${TRACK_LABEL[t.track ?? ""]} · day ${t.day ?? 0}` : KIND_LABEL[t.kind]);
 
 function Editor({ t, onClose, onSaved }: { t: WaTemplate; onClose: () => void; onSaved: () => void }): ReactElement {
   const toast = useToast();
@@ -25,7 +25,7 @@ function Editor({ t, onClose, onSaved }: { t: WaTemplate; onClose: () => void; o
     }
   };
   return (
-    <Modal title={t.id ? "Edit template" : "New template"} subtitle="Use {{FirstName}} and {{Firm}}. Keep a first message under 400 characters." onClose={onClose}
+    <Modal title={t.id ? "Edit template" : "New template"} subtitle="Use {{FirstName}}, {{Business}} and {{City}}. Keep a first message under 400 characters." onClose={onClose}
       footer={<><button type="button" className="btn" onClick={onClose}>Cancel</button><button type="button" className="btn dark" disabled={busy || !draft.name.trim() || !draft.text.trim()} onClick={() => void save()}>Save template</button></>}>
       <div className="mk mk-imp">
         <label className="fl">Name<input className="inp" value={draft.name} maxLength={120} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></label>
@@ -34,6 +34,16 @@ function Editor({ t, onClose, onSaved }: { t: WaTemplate; onClose: () => void; o
             {KINDS.map((k) => <option key={k} value={k}>{KIND_LABEL[k]}</option>)}
           </select>
         </label>
+        {draft.kind === "nurture" ? (
+          <div className="fr">
+            <label className="fl">Sequence
+              <select className="inp" value={draft.track ?? ""} onChange={(e) => setDraft({ ...draft, track: e.target.value as WaTrack })}>
+                {(Object.keys(TRACK_LABEL) as WaTrack[]).map((t) => <option key={t} value={t}>{TRACK_LABEL[t]}</option>)}
+              </select>
+            </label>
+            <label className="fl">Days after the YES<input className="inp" type="number" min={0} max={90} value={draft.day ?? 0} onChange={(e) => setDraft({ ...draft, day: Number(e.target.value) })} /></label>
+          </div>
+        ) : null}
         <label className="fl">Message <span className="k">{draft.text.length} characters</span><textarea className="inp" rows={9} maxLength={1000} value={draft.text} onChange={(e) => setDraft({ ...draft, text: e.target.value })} /></label>
         <span className="k">Preview</span>
         <div className="wa-chat"><Bubble text={sample(draft.text) || " "} meta="10:24" /></div>
@@ -47,7 +57,7 @@ export function TemplatesTab({ templates, reload }: { templates: WaTemplate[]; r
   const [kind, setKind] = useState<WaKind | "">("");
   const [editing, setEditing] = useState<WaTemplate | null>(null);
   const [removing, setRemoving] = useState<WaTemplate | null>(null);
-  const rows = templates.filter((t) => !kind || t.kind === kind);
+  const rows = templates.filter((t) => !kind || t.kind === kind).sort((a, b) => (a.kind === "nurture" && b.kind === "nurture" ? (a.day ?? 0) - (b.day ?? 0) : 0));
   return (
     <>
       <div className="fr between">
@@ -55,12 +65,12 @@ export function TemplatesTab({ templates, reload }: { templates: WaTemplate[]; r
           <button type="button" className={"chip" + (kind === "" ? " on" : "")} onClick={() => setKind("")}>All</button>
           {KINDS.map((k) => <button key={k} type="button" className={"chip" + (kind === k ? " on" : "")} onClick={() => setKind(k)}>{KIND_LABEL[k]}</button>)}
         </div>
-        <button type="button" className="btn dark" onClick={() => setEditing({ name: "", kind: kind || "first", text: "Hi {{FirstName}}, " })}>New template</button>
+        <button type="button" className="btn dark" onClick={() => setEditing({ name: "", kind: kind || "first", text: "Hi {{FirstName}}, ", track: "", day: 0 })}>New template</button>
       </div>
       <div className="wa-tgrid">
         {rows.map((t) => (
           <article key={t.id} className="card wa-tcard">
-            <header><div><h3>{t.name}</h3><span className="k">{sample(t.text).length} characters</span></div><span className={"pill" + (t.kind === "first" ? " warn" : "")}>{KIND_LABEL[t.kind]}</span></header>
+            <header><div><h3>{t.name}</h3><span className="k">{sample(t.text).length} characters</span></div><span className={"pill" + (t.kind === "first" ? " warn" : t.kind === "nurture" ? " good" : "")}>{label(t)}</span></header>
             <div className="wa-chat"><Bubble text={sample(t.text)} meta="10:24" /></div>
             <footer className="fr between">
               <button type="button" className="btn sm" onClick={() => setEditing(t)}>Edit</button>

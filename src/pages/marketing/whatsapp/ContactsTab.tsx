@@ -3,12 +3,12 @@ import { Modal } from "../../../components/Modal";
 import { useToast } from "../../../components/Toast";
 import {
   actOn, addWaFile, deleteWaContact, downloadWaTemplate, getWaContact, patchWaContact, reviewWaFile,
-  type WaCampaign, type WaChoice, type WaContact, type WaFileRow, type WaStatus,
+  type WaCampaign, type WaChoice, type WaContact, type WaFileRow, type WaStatus, type WaTrack,
 } from "../../../lib/whatsappApi";
-import { Bubble, errText, nameOf, when, WaPill, WA_STATUS } from "./shared";
+import { Bubble, errText, nameOf, TRACK_LABEL, when, WaPill, WA_STATUS } from "./shared";
 
 const RESULT: Record<WaFileRow["result"], string> = { ready: "good", warn: "warn", bad: "bad" };
-const COLUMNS = ["Business Name", "Phone", "Segment", "Country", "City"];
+const COLUMNS = ["Business Name", "Phone", "Segment", "Country", "City", "Opt-in (Y)"];
 const OPTIONAL = ["First Name", "Source", "Useful Info"];
 
 function Upload({ campaigns, onAdded }: { campaigns: WaCampaign[]; onAdded: () => void }): ReactElement {
@@ -156,6 +156,11 @@ function ContactDrawer({ id, campaigns, onClose, onChanged }: { id: number; camp
             <select className="inp" value={c.campaign ?? 0} onChange={(e) => void run(() => patchWaContact(c.id, { campaign: Number(e.target.value) || null }), "Campaign changed.")}>
               <option value={0}>No campaign</option>
               {campaigns.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+            </select>
+          </label>
+          <label className="fl">After-YES sequence {c.yes_date ? <span className="k">YES on {when(c.yes_date)}</span> : null}
+            <select className="inp" value={c.track} onChange={(e) => void run(() => patchWaContact(c.id, { track: e.target.value as WaTrack }), "Sequence changed.")}>
+              {(Object.keys(TRACK_LABEL) as WaTrack[]).map((t) => <option key={t} value={t}>{t ? TRACK_LABEL[t] : "Not chosen yet"}</option>)}
             </select>
           </label>
           <div className="mk-sec">

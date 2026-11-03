@@ -7,13 +7,15 @@ import {
   deleteWaCampaign, saveWaCampaign, waCampaignAction,
   type WaCampaign, type WaContact, type WaGoal, type WaKind, type WaTemplate,
 } from "../../../lib/whatsappApi";
-import { Bubble, errText } from "./shared";
+import { Bubble, errText, sampleText } from "./shared";
 
 const STATUS: Record<string, [string, string]> = { draft: ["Draft", ""], live: ["Live", "good"], paused: ["Paused", "warn"] };
 const GOALS: [WaGoal, string][] = [["Conversations", "They reply to you"], ["Free signups", "They create a free account"], ["Installs", "Zinwe runs on one PC"], ["Paid plans", "They upgrade"]];
 const STEPS: [keyof WaCampaign & WaKind, string, string][] = [
   ["first", "First message", "Day 0"],
-  ["followup", "Follow-up if no reply", "After the wait below"],
+  ["followup", "Free tip if no reply", "After the wait below"],
+  ["touch3", "Polite close if still no reply", "The last message, on the day set below"],
+  ["touch4", "Extra message", "Leave off for outreach: three messages at most"],
   ["interested", "If they reply YES", "You send it the same day"],
   ["question", "If they ask a question", "You answer, Claude drafts a start"],
   ["notnow", "If they say not now", "Close kindly, never again"],
@@ -61,7 +63,7 @@ export function CampaignList({ campaigns }: { campaigns: WaCampaign[] }): ReactE
 
 const blank = (templates: WaTemplate[]): WaCampaign => {
   const pick = (k: WaKind) => templates.find((t) => t.kind === k)?.id ?? null;
-  return { name: "", audience: null, goal: "Conversations", daily_limit: 15, followup_days: 3, first: pick("first"), followup: pick("followup"), interested: pick("interested"), question: pick("question"), notnow: pick("notnow") };
+  return { name: "", audience: null, goal: "Conversations", daily_limit: 15, followup_days: 3, first: pick("first"), followup: pick("followup"), interested: pick("interested"), question: pick("question"), notnow: pick("notnow"), touch3: pick("touch3"), touch4: null, touch3_days: 7, touch4_days: 60 };
 };
 
 /** New campaign and campaign settings: name and goal, target audience, the message sequence, the daily limit. */
@@ -80,7 +82,7 @@ export function CampaignEditor({ campaign, templates, audiences, contacts, onSav
   const set = (patch: Partial<WaCampaign>) => setC((x) => ({ ...x, ...patch }));
   const first = templates.find((t) => t.id === c.first);
   const sample = contacts.find((x) => x.campaign === c.id) ?? contacts[0];
-  const preview = first ? first.text.replace(/\{\{FirstName\}\}/g, sample?.first_name || "Rakesh").replace(/\{\{Firm\}\}/g, sample?.firm || "Gupta Exim") : "";
+  const preview = first ? sampleText(first.text, sample?.firm || "Gupta Exim", sample?.first_name || "Rakesh") : "";
   const mine = contacts.filter((x) => x.campaign === c.id && c.id);
   const save = async () => {
     setBusy(true);
@@ -143,18 +145,20 @@ export function CampaignEditor({ campaign, templates, audiences, contacts, onSav
             {STEPS.map(([key, label, help]) => (
               <label key={key} className="fl">{label} <span className="k">{help}</span>
                 <select className="inp" value={(c[key] as number | null) ?? 0} onChange={(e) => set({ [key]: Number(e.target.value) || null } as Partial<WaCampaign>)}>
-                  {key === "first" ? null : <option value={0}>{key === "followup" ? "No follow-up" : "Use any template of this kind"}</option>}
+                  {key === "first" ? null : <option value={0}>{key === "followup" ? "No follow-up" : key === "touch3" || key === "touch4" ? "None" : "Use any template of this kind"}</option>}
                   {templates.filter((t) => t.kind === key).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
               </label>
             ))}
-            <span className="k">At most one follow-up. Claude personalises each message from the contact's Useful Info when the key is set.</span>
+            <span className="k">Opted-in numbers only. Someone who never replies gets three messages at most: the first, a tip and a polite close. After a YES, the After YES templates take over (Templates). Claude personalises each message from the contact's Useful Info when the key is set.</span>
           </section>
           <section className="card afsec">
             <h2>Pace</h2>
             <div className="fr">
               <label className="fl">New messages a day<input className="inp" type="number" min={1} max={50} value={c.daily_limit} onChange={(e) => set({ daily_limit: Number(e.target.value) })} /></label>
               <label className="fl">Days before the follow-up<input className="inp" type="number" min={1} max={14} value={c.followup_days} onChange={(e) => set({ followup_days: Number(e.target.value) })} /></label>
+              <label className="fl">Polite close on day<input className="inp" type="number" min={2} max={89} value={c.touch3_days} onChange={(e) => set({ touch3_days: Number(e.target.value) })} /></label>
+              <label className="fl">Extra message on day<input className="inp" type="number" min={3} max={90} value={c.touch4_days} onChange={(e) => set({ touch4_days: Number(e.target.value) })} /></label>
             </div>
             <span className="k">Replies to people who wrote back don't count towards the limit.</span>
           </section>

@@ -5,8 +5,12 @@ import { getToken } from "./session";
 const BASE = "/api/admin/marketing/wa";
 
 export type WaStatus = "ready" | "messaged" | "replied" | "interested" | "signed" | "notnow" | "stop";
-export type WaKind = "first" | "followup" | "interested" | "question" | "notnow";
-export type WaMessageKind = "first" | "followup" | "reply" | "theirs";
+export type WaKind = "first" | "followup" | "touch3" | "touch4" | "interested" | "question" | "notnow" | "nurture";
+export type WaMessageKind = "first" | "followup" | "touch" | "nurture" | "reply" | "theirs";
+/** The after-YES sequence a contact is on ("" = only the messages every YES gets). */
+export type WaTrack = "" | "data" | "day" | "chat";
+/** What a person can mark as sent: a step of the sequence, or a reply. */
+export type WaSendKind = "first" | "followup" | "touch3" | "touch4" | "nurture" | "reply";
 export type WaGoal = "Conversations" | "Free signups" | "Installs" | "Paid plans";
 
 export interface WaMessage {
@@ -36,6 +40,10 @@ export interface WaContact {
   paused_until: string | null;
   created_at: string;
   last: { kind: WaMessageKind; text: string; at: string } | null;
+  track: WaTrack;
+  yes_date: string | null;
+  nurture_day: number;
+  first_sent: string | null;
   messages?: WaMessage[];
 }
 
@@ -62,6 +70,10 @@ export interface WaCampaign {
   interested: number | null;
   question: number | null;
   notnow: number | null;
+  touch3: number | null;
+  touch4: number | null;
+  touch3_days: number;
+  touch4_days: number;
   stats?: WaStats;
 }
 
@@ -70,6 +82,8 @@ export interface WaTemplate {
   name: string;
   kind: WaKind;
   text: string;
+  track?: WaTrack;
+  day?: number;
 }
 
 export interface WaFileRow {
@@ -87,7 +101,7 @@ export interface WaFileRow {
 }
 
 export interface WaToday {
-  queue: { kind: "first" | "followup"; contact: WaContact }[];
+  queue: { kind: Exclude<WaSendKind, "reply">; template: string; contact: WaContact }[];
   replies: WaContact[];
   sent_today: number;
   stats: WaStats;
@@ -112,11 +126,11 @@ const post = (body: unknown) => ({ method: "POST", body: JSON.stringify(body) })
 export const getToday = () => request<WaToday>(`${BASE}/today/`);
 export const getWaContacts = () => request<WaContact[]>(`${BASE}/contacts/`);
 export const getWaContact = (id: number) => request<WaContact>(`${BASE}/contacts/${id}/`);
-export const patchWaContact = (id: number, patch: Partial<Pick<WaContact, "campaign" | "first_name" | "firm" | "segment" | "city" | "info">>) =>
+export const patchWaContact = (id: number, patch: Partial<Pick<WaContact, "campaign" | "first_name" | "firm" | "segment" | "city" | "info" | "track">>) =>
   request<WaContact>(`${BASE}/contacts/${id}/`, { method: "PATCH", body: JSON.stringify(patch) });
 export const deleteWaContact = (id: number) => request<null>(`${BASE}/contacts/${id}/`, { method: "DELETE" });
 export const draftFor = (id: number, kind: WaKind) => request<{ text: string; template: string; by: "claude" | "template" }>(`${BASE}/contacts/${id}/draft/`, post({ kind }));
-export const markSent = (id: number, kind: "first" | "followup" | "reply", text: string) => request<WaContact>(`${BASE}/contacts/${id}/sent/`, post({ kind, text }));
+export const markSent = (id: number, kind: WaSendKind, text: string) => request<WaContact>(`${BASE}/contacts/${id}/sent/`, post({ kind, text }));
 export const logReply = (id: number, text: string) => request<WaContact>(`${BASE}/contacts/${id}/reply/`, post({ text }));
 export const actOn = (id: number, action: "interested" | "signed" | "notnow" | "stop" | "pause" | "resume") => request<WaContact>(`${BASE}/contacts/${id}/act/`, post({ action }));
 

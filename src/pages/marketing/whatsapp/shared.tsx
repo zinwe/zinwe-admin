@@ -1,15 +1,20 @@
 import type { ReactElement } from "react";
 import { NavLink } from "react-router-dom";
 import { ApiError } from "../../../lib/api";
-import type { WaContact, WaKind, WaStatus } from "../../../lib/whatsappApi";
+import type { WaContact, WaKind, WaStatus, WaTrack } from "../../../lib/whatsappApi";
 
 export const WA_STATUS: Record<WaStatus, [string, string]> = {
   ready: ["Ready", ""], messaged: ["Messaged", "warn"], replied: ["Replied", "warn"], interested: ["Interested", "good"],
   signed: ["Signed up", "good"], notnow: ["Not now", ""], stop: ["Do not message", "bad"],
 };
 export const KIND_LABEL: Record<WaKind, string> = {
-  first: "First message", followup: "Follow-up", interested: "Reply: interested", question: "Reply: question", notnow: "Reply: not now",
+  first: "First message", followup: "Follow-up", touch3: "No reply: polite close", touch4: "No reply: extra message",
+  interested: "Reply: interested", question: "Reply: question", notnow: "Reply: not now", nurture: "After YES",
 };
+export const TRACK_LABEL: Record<WaTrack, string> = { "": "Every YES", data: "Data safety", day: "Team's day", chat: "Team chat" };
+/** Fills the placeholders with a sample business, for previews. */
+export const sampleText = (t: string, firm = "Gupta Exim", first = "Rakesh"): string =>
+  t.replace(/\{\{FirstName\}\}/g, first).replace(/\{\{(Firm|Business)\}\}/g, firm).replace(/\{\{City\}\}/g, "Noida");
 export const WaPill = ({ s }: { s: WaStatus }): ReactElement => <span className={"pill " + WA_STATUS[s][1]}>{WA_STATUS[s][0]}</span>;
 export const errText = (err: unknown, fallback: string): string => (err instanceof ApiError ? err.message : fallback);
 export const nameOf = (c: Pick<WaContact, "first_name" | "info" | "firm">): string => c.info?.contact_name || c.first_name || c.firm;
