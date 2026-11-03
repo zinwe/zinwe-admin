@@ -44,6 +44,8 @@ export interface WaContact {
   yes_date: string | null;
   nurture_day: number;
   first_sent: string | null;
+  opted_in: boolean;
+  opt_in_note: string;
   messages?: WaMessage[];
 }
 
@@ -105,7 +107,7 @@ export interface WaFileRow {
   city: string;
   source: string;
   info: Record<string, string>;
-  result: "ready" | "warn" | "bad";
+  result: "ready" | "warn" | "locked" | "bad";
   message: string;
 }
 
@@ -141,7 +143,7 @@ export const deleteWaContact = (id: number) => request<null>(`${BASE}/contacts/$
 export const draftFor = (id: number, kind: WaKind) => request<{ text: string; template: string; by: "claude" | "template"; media: WaMedia | null }>(`${BASE}/contacts/${id}/draft/`, post({ kind }));
 export const markSent = (id: number, kind: WaSendKind, text: string) => request<WaContact>(`${BASE}/contacts/${id}/sent/`, post({ kind, text }));
 export const logReply = (id: number, text: string) => request<WaContact>(`${BASE}/contacts/${id}/reply/`, post({ text }));
-export const actOn = (id: number, action: "interested" | "signed" | "notnow" | "stop" | "pause" | "resume") => request<WaContact>(`${BASE}/contacts/${id}/act/`, post({ action }));
+export const actOn = (id: number, action: "interested" | "signed" | "notnow" | "stop" | "pause" | "resume" | "optin", note = "") => request<WaContact>(`${BASE}/contacts/${id}/act/`, post({ action, note }));
 
 function fileBody(file: File, choices?: Record<string, WaChoice>): FormData {
   const body = new FormData();

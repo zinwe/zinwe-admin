@@ -7,8 +7,8 @@ import {
 } from "../../../lib/whatsappApi";
 import { Bubble, errText, nameOf, TRACK_LABEL, when, WaPill, WA_STATUS } from "./shared";
 
-const RESULT: Record<WaFileRow["result"], string> = { ready: "good", warn: "warn", bad: "bad" };
-const COLUMNS = ["Business Name", "Phone", "Segment", "Country", "City", "Opt-in (Y)"];
+const RESULT: Record<WaFileRow["result"], string> = { ready: "good", warn: "warn", locked: "", bad: "bad" };
+const COLUMNS = ["Business Name", "Phone", "Segment", "Country", "City", "Opt-in (Y or blank)"];
 const OPTIONAL = ["First Name", "Source", "Useful Info"];
 
 function Upload({ campaigns, onAdded }: { campaigns: WaCampaign[]; onAdded: () => void }): ReactElement {
@@ -59,10 +59,11 @@ function Upload({ campaigns, onAdded }: { campaigns: WaCampaign[]; onAdded: () =
 
   if (rows) {
     const keep = rows.filter((r) => r.result !== "bad" && choices[r.row]?.include).length;
+    const locked = rows.filter((r) => r.result === "locked" && choices[r.row]?.include).length;
     const segments = [...new Set(rows.map((r) => r.segment).filter(Boolean))];
     return (
       <section className="card editor">
-        <div className="fighead"><h2>Check each row</h2><span className="k">{file?.name} · {keep} to add</span></div>
+        <div className="fighead"><h2>Check each row</h2><span className="k">{file?.name} · {keep} to add{locked ? `, ${locked} of them locked until they opt in` : ""}</span></div>
         <div className="scroll">
           <table className="tbl">
             <caption className="sr">Rows to review</caption>
@@ -114,10 +115,24 @@ function Upload({ campaigns, onAdded }: { campaigns: WaCampaign[]; onAdded: () =
       <label className={"dropz" + (over ? " over" : "")} onDragOver={(e) => { e.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)} onDrop={drop}>
         <input ref={input} className="sr" type="file" accept=".xlsx,.csv" aria-label="Choose a contact file" onChange={(e) => void review(e.target.files?.[0])} />
         <b>{busy ? "Reading your file" : "Drop your Excel file here, or click to choose"}</b>
-        <span className="k">.xlsx or .csv. Phone with country code, or a 10-digit number for India or the USA. You check every row before anything is added. Numbers that asked to stop are always skipped.</span>
+        <span className="k">.xlsx or .csv. Phone with country code, or a 10-digit number for India or the USA. You check every row before anything is added. Rows without opt-in are added locked: Zinwe drafts nothing for them until you mark them opted in. Numbers that asked to stop are always skipped.</span>
       </label>
       {problem ? <span className="aferr" role="alert">{problem}</span> : null}
     </section>
+  );
+}
+
+/** A locked contact: nobody messages them until someone records how they agreed. */
+function OptIn({ c, run }: { c: WaContact; run: (work: () => Promise<WaContact | null>, done: string) => Promise<void> }): ReactElement {
+  const [note, setNote] = useState("");
+  if (c.opted_in) return <p className="k">Opted in: {c.opt_in_note || "before opt-in was recorded"}</p>;
+  return (
+    <div className="mk-sec wa-locked">
+      <h3>Not opted in yet</h3>
+      <span className="k">Zinwe won’t draft or queue a WhatsApp message for this business until they agree, for example after a yes by email or LinkedIn, or an introduction.</span>
+      <label className="fl">How did they agree?<input className="inp" maxLength={200} value={note} placeholder="Example: said yes by email on 5 Nov" onChange={(e) => setNote(e.target.value)} /></label>
+      <button type="button" className="btn sm dark mk-start" disabled={!note.trim()} onClick={() => void run(() => actOn(c.id, "optin", note), "Marked as opted in.")}>Mark as opted in</button>
+    </div>
   );
 }
 
@@ -145,7 +160,8 @@ function ContactDrawer({ id, campaigns, onClose, onChanged }: { id: number; camp
       footer={<button type="button" className="btn" onClick={onClose}>Close</button>}>
       {c ? (
         <div className="mk mk-drawer">
-          <div className="fr"><WaPill s={c.status} />{c.paused_until ? <span className="pill">Paused until {when(c.paused_until)}</span> : null}</div>
+          <div className="fr"><WaPill s={c.status} />{c.opted_in ? null : <span className="pill">Not opted in</span>}{c.paused_until ? <span className="pill">Paused until {when(c.paused_until)}</span> : null}</div>
+          <OptIn c={c} run={run} />
           <dl>
             <dt>Segment</dt><dd>{c.segment}</dd>
             <dt>City</dt><dd>{c.city}, {c.country}</dd>
@@ -190,7 +206,8 @@ function ContactDrawer({ id, campaigns, onClose, onChanged }: { id: number; camp
 
 const VIEWS: [string, string, (c: WaContact) => boolean][] = [
   ["all", "All", () => true],
-  ["ready", "Ready", (c) => c.status === "ready"],
+  ["locked", "Not opted in", (c) => !c.opted_in],
+  ["ready", "Ready", (c) => c.status === "ready" && c.opted_in],
   ["talking", "In conversation", (c) => c.status === "messaged" || c.status === "replied"],
   ["won", "Interested or signed up", (c) => c.status === "interested" || c.status === "signed"],
   ["stop", "Do not message", (c) => c.status === "stop"],
@@ -231,7 +248,7 @@ export function ContactsTab({ contacts, campaigns, reload }: { contacts: WaConta
                   <th scope="row"><button type="button" className="cobtn" onClick={(e) => { e.stopPropagation(); setOpen(c.id); }}>{c.firm}</button><span className="k" style={{ display: "block" }}>{c.first_name || "—"} · {c.city}</span></th>
                   <td className="num">{c.phone}</td>
                   <td>{c.segment}</td>
-                  <td><WaPill s={c.status as WaStatus} /></td>
+                  <td>{c.opted_in ? <WaPill s={c.status as WaStatus} /> : <span className="pill" title="Locked until they opt in">Not opted in</span>}</td>
                   <td>{c.campaign_name || <span className="k">None</span>}</td>
                   <td className="k">{c.last ? `${c.last.kind === "theirs" ? "They wrote" : "Sent"} ${when(c.last.at)}` : WA_STATUS[c.status][0]}</td>
                 </tr>
