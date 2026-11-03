@@ -2,8 +2,8 @@ import { useState, type ReactElement } from "react";
 import { ConfirmDialog } from "../../../components/ConfirmDialog";
 import { Modal } from "../../../components/Modal";
 import { useToast } from "../../../components/Toast";
-import { deleteWaTemplate, saveWaTemplate, type WaKind, type WaTemplate, type WaTrack } from "../../../lib/whatsappApi";
-import { Bubble, errText, KIND_LABEL, sampleText as sample, TRACK_LABEL } from "./shared";
+import { deleteWaTemplate, removeWaMedia, saveWaTemplate, uploadWaMedia, type WaKind, type WaTemplate, type WaTrack } from "../../../lib/whatsappApi";
+import { Bubble, COLD_KINDS, errText, KIND_LABEL, MEDIA_ACCEPT, mediaProblem, mediaWord, MediaView, sampleText as sample, sizeText, TRACK_LABEL } from "./shared";
 
 const KINDS = Object.keys(KIND_LABEL) as WaKind[];
 const label = (t: WaTemplate) => (t.kind === "nurture" ? `After YES · ${TRACK_LABEL[t.track ?? ""]} · day ${t.day ?? 0}` : KIND_LABEL[t.kind]);
@@ -12,10 +12,27 @@ function Editor({ t, onClose, onSaved }: { t: WaTemplate; onClose: () => void; o
   const toast = useToast();
   const [draft, setDraft] = useState(t);
   const [busy, setBusy] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [drop, setDrop] = useState(false); // remove the saved one on Save
+  const [problem, setProblem] = useState("");
+  const cold = COLD_KINDS.includes(draft.kind);
+  const kept = drop ? null : t.media ?? null;
+  const showing = !cold && (file || kept);
+  const pick = (picked: File | undefined) => {
+    if (!picked) return;
+    const why = mediaProblem(picked);
+    setProblem(why);
+    if (!why) {
+      setFile(picked);
+      setDrop(false);
+    }
+  };
   const save = async () => {
     setBusy(true);
     try {
-      await saveWaTemplate(draft);
+      const saved = await saveWaTemplate(draft);
+      if (file && !cold) await uploadWaMedia(saved.id as number, file);
+      else if (t.media && (drop || cold)) await removeWaMedia(saved.id as number);
       toast("Template saved.");
       onSaved();
       onClose();
@@ -45,8 +62,34 @@ function Editor({ t, onClose, onSaved }: { t: WaTemplate; onClose: () => void; o
           </div>
         ) : null}
         <label className="fl">Message <span className="k">{draft.text.length} characters</span><textarea className="inp" rows={9} maxLength={1000} value={draft.text} onChange={(e) => setDraft({ ...draft, text: e.target.value })} /></label>
+        <div className="fl">
+          <span>Picture or video <span className="k">Optional</span></span>
+          {cold ? (
+            <span className="k">{KIND_LABEL[draft.kind]} goes to people who haven’t replied, so it stays text only: to a stranger, a picture or video looks like spam.{t.media && !drop ? " Its saved file will be removed when you save." : ""}</span>
+          ) : (
+            <>
+              {showing ? (
+                <div className="wa-mfile">
+                  <span>{file ? `${file.name} · ${sizeText(file.size)}` : `${kept?.name} · ${sizeText(kept?.size ?? 0)}`}</span>
+                  <div className="fr">
+                    <label className="btn sm">Replace<input className="sr" type="file" accept={MEDIA_ACCEPT} onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} /></label>
+                    <button type="button" className="btn sm" onClick={() => { setFile(null); setDrop(true); setProblem(""); }}>Remove</button>
+                  </div>
+                </div>
+              ) : (
+                <label className="wa-mdrop">
+                  <input className="sr" type="file" accept={MEDIA_ACCEPT} aria-label="Choose a picture or video" onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} />
+                  <b>Add a creative or video</b>
+                  <span className="k">JPG, PNG or WebP up to 5 MB · MP4 or MOV up to 9 MB</span>
+                </label>
+              )}
+              {problem ? <span className="aferr" role="alert">{problem}</span> : null}
+              <span className="k">WhatsApp links carry text only. When you send this, Today shows the {showing ? mediaWord(file ? (file.type.startsWith("video") ? "video" : "image") : kept?.kind ?? "image") : "file"} to paste or attach in the chat.</span>
+            </>
+          )}
+        </div>
         <span className="k">Preview</span>
-        <div className="wa-chat"><Bubble text={sample(draft.text) || " "} meta="10:24" /></div>
+        <div className="wa-chat"><Bubble text={sample(draft.text) || " "} meta="10:24" media={showing ? <MediaView media={file ? null : kept} file={file} /> : undefined} /></div>
       </div>
     </Modal>
   );
@@ -71,7 +114,7 @@ export function TemplatesTab({ templates, reload }: { templates: WaTemplate[]; r
         {rows.map((t) => (
           <article key={t.id} className="card wa-tcard">
             <header><div><h3>{t.name}</h3><span className="k">{sample(t.text).length} characters</span></div><span className={"pill" + (t.kind === "first" ? " warn" : t.kind === "nurture" ? " good" : "")}>{label(t)}</span></header>
-            <div className="wa-chat"><Bubble text={sample(t.text)} meta="10:24" /></div>
+            <div className="wa-chat"><Bubble text={sample(t.text)} meta="10:24" media={t.media ? <MediaView media={t.media} /> : undefined} /></div>
             <footer className="fr between">
               <button type="button" className="btn sm" onClick={() => setEditing(t)}>Edit</button>
               <button type="button" className="btn sm danger" onClick={() => setRemoving(t)}>Delete</button>
@@ -85,7 +128,7 @@ export function TemplatesTab({ templates, reload }: { templates: WaTemplate[]; r
           <li>Say who you are in the first line.</li>
           <li>One problem, one offer, under 400 characters.</li>
           <li>Tell them how to stop: reply STOP.</li>
-          <li>No links, images or PDFs until they say yes. To a stranger they look like spam.</li>
+          <li>No links, images or PDFs until they say yes. To a stranger they look like spam. Creatives and videos go on replies and after-YES messages.</li>
         </ul>
       </section>
       {editing ? <Editor t={editing} onClose={() => setEditing(null)} onSaved={reload} /> : null}

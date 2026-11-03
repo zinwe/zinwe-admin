@@ -1,11 +1,64 @@
 import { useEffect, useState, type ReactElement } from "react";
 import { Link } from "react-router-dom";
 import {
-  actOn, draftFor, logReply, markSent, patchWaContact, waLink,
-  type WaContact, type WaKind, type WaSendKind, type WaToday, type WaTrack,
+  actOn, draftFor, fetchWaMedia, logReply, markSent, patchWaContact, waLink,
+  type WaContact, type WaKind, type WaMedia, type WaSendKind, type WaToday, type WaTrack,
 } from "../../../lib/whatsappApi";
 import { useToast } from "../../../components/Toast";
-import { Bubble, errText, initials, KIND_LABEL, nameOf, TRACK_LABEL } from "./shared";
+import { Bubble, errText, initials, KIND_LABEL, mediaWord, MediaView, nameOf, sizeText, TRACK_LABEL } from "./shared";
+
+/** Clipboards take PNG only, so other pictures are redrawn as PNG first. */
+async function asPng(blob: Blob): Promise<Blob> {
+  if (blob.type === "image/png") return blob;
+  const bitmap = await createImageBitmap(blob);
+  const canvas = document.createElement("canvas");
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
+  canvas.getContext("2d")?.drawImage(bitmap, 0, 0);
+  return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("png"))), "image/png"));
+}
+
+/** The template's picture or video: wa.me links carry text only, so staff paste or attach it in the chat. */
+function Attach({ media }: { media: WaMedia }): ReactElement {
+  const toast = useToast();
+  const word = mediaWord(media.kind);
+  const download = async () => {
+    try {
+      const url = URL.createObjectURL(await fetchWaMedia(media.url));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = media.name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    } catch (err) {
+      toast(errText(err, "Couldn't download it."), "bad");
+    }
+  };
+  const copy = async () => {
+    try {
+      const png = await asPng(await fetchWaMedia(media.url));
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": png })]);
+      toast("Picture copied. Click in the WhatsApp chat and press Ctrl+V.");
+    } catch {
+      toast("Your browser blocked the copy. Use Download instead.", "bad");
+    }
+  };
+  return (
+    <div className="wa-attach">
+      <MediaView media={media} />
+      <div>
+        <b>Send this {word} too</b>
+        <span className="k">WhatsApp links carry text only. After Open in WhatsApp, {media.kind === "image" ? "copy the picture and paste it into the chat" : "download the video and attach it in the chat"}, then press Send. {media.name} · {sizeText(media.size)}</span>
+        <div className="fr">
+          {media.kind === "image" ? <button type="button" className="btn sm" onClick={() => void copy()}>Copy picture</button> : null}
+          <button type="button" className="btn sm" onClick={() => void download()}>Download {word}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /** Which after-YES sequence they get: picked from what they said matters most. */
 function TrackPicker({ c, onDone }: { c: WaContact; onDone: () => void }): ReactElement {
@@ -35,10 +88,11 @@ function Draft({ c, kind, send, onDone }: { c: WaContact; kind: WaKind; send: Wa
   const [by, setBy] = useState("");
   const [busy, setBusy] = useState(true);
   const [opened, setOpened] = useState(false);
+  const [media, setMedia] = useState<WaMedia | null>(null);
   const load = () => {
     setBusy(true);
     draftFor(c.id, kind)
-      .then((d) => { setText(d.text); setBy(d.by === "claude" ? `Personalised by Claude from ${d.template}` : `From the template ${d.template}`); })
+      .then((d) => { setText(d.text); setMedia(d.media ?? null); setBy(d.by === "claude" ? `Personalised by Claude from ${d.template}` : `From the template ${d.template}`); })
       .catch((err) => toast(errText(err, "Couldn't draft this message."), "bad"))
       .finally(() => setBusy(false));
   };
@@ -58,6 +112,7 @@ function Draft({ c, kind, send, onDone }: { c: WaContact; kind: WaKind; send: Wa
     <div className="wa-draft">
       <span className="wa-by">{busy && !text ? "Drafting…" : by}</span>
       <textarea className="inp" rows={7} aria-label={`Message to ${nameOf(c)}`} value={text} onChange={(e) => setText(e.target.value)} />
+      {media ? <Attach media={media} /> : null}
       <div className="fr">
         <a className="btn sm wa-open" href={waLink(c.phone, text)} target="_blank" rel="noreferrer" onClick={() => setOpened(true)} aria-disabled={!text}>Open in WhatsApp</a>
         <button type="button" className={"btn sm" + (opened ? " dark" : "")} disabled={busy || !text.trim()} onClick={() => void sent()}>Mark as sent</button>

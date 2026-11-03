@@ -77,6 +77,14 @@ export interface WaCampaign {
   stats?: WaStats;
 }
 
+/** A picture or video staff attach in WhatsApp by hand: wa.me links carry text only. */
+export interface WaMedia {
+  kind: "image" | "video";
+  name: string;
+  size: number;
+  url: string;
+}
+
 export interface WaTemplate {
   id?: number;
   name: string;
@@ -84,6 +92,7 @@ export interface WaTemplate {
   text: string;
   track?: WaTrack;
   day?: number;
+  media?: WaMedia | null;
 }
 
 export interface WaFileRow {
@@ -129,7 +138,7 @@ export const getWaContact = (id: number) => request<WaContact>(`${BASE}/contacts
 export const patchWaContact = (id: number, patch: Partial<Pick<WaContact, "campaign" | "first_name" | "firm" | "segment" | "city" | "info" | "track">>) =>
   request<WaContact>(`${BASE}/contacts/${id}/`, { method: "PATCH", body: JSON.stringify(patch) });
 export const deleteWaContact = (id: number) => request<null>(`${BASE}/contacts/${id}/`, { method: "DELETE" });
-export const draftFor = (id: number, kind: WaKind) => request<{ text: string; template: string; by: "claude" | "template" }>(`${BASE}/contacts/${id}/draft/`, post({ kind }));
+export const draftFor = (id: number, kind: WaKind) => request<{ text: string; template: string; by: "claude" | "template"; media: WaMedia | null }>(`${BASE}/contacts/${id}/draft/`, post({ kind }));
 export const markSent = (id: number, kind: WaSendKind, text: string) => request<WaContact>(`${BASE}/contacts/${id}/sent/`, post({ kind, text }));
 export const logReply = (id: number, text: string) => request<WaContact>(`${BASE}/contacts/${id}/reply/`, post({ text }));
 export const actOn = (id: number, action: "interested" | "signed" | "notnow" | "stop" | "pause" | "resume") => request<WaContact>(`${BASE}/contacts/${id}/act/`, post({ action }));
@@ -157,6 +166,20 @@ export const getWaTemplates = () => request<WaTemplate[]>(`${BASE}/templates/`);
 export const saveWaTemplate = (t: WaTemplate) =>
   t.id ? request<WaTemplate>(`${BASE}/templates/${t.id}/`, { method: "PUT", body: JSON.stringify(t) }) : request<WaTemplate>(`${BASE}/templates/`, post(t));
 export const deleteWaTemplate = (id: number) => request<null>(`${BASE}/templates/${id}/`, { method: "DELETE" });
+export const uploadWaMedia = (id: number, file: File) => {
+  const body = new FormData();
+  body.append("file", file);
+  return request<WaTemplate>(`${BASE}/templates/${id}/media/`, { method: "POST", body });
+};
+export const removeWaMedia = (id: number) => request<WaTemplate>(`${BASE}/templates/${id}/media/`, { method: "DELETE" });
+
+/** The file itself, with the staff token (uploads are never public). */
+export async function fetchWaMedia(url: string): Promise<Blob> {
+  const token = getToken();
+  const res = await fetch(url, { headers: token ? { Authorization: `Token ${token}` } : {} });
+  if (!res.ok) throw new ApiError(`Couldn't load the file (${res.status}).`, res.status);
+  return res.blob();
+}
 
 export const getWaAnalytics = () => request<WaAnalytics>(`${BASE}/analytics/`);
 

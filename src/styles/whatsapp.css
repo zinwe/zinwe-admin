@@ -34,3 +34,17 @@
 .wa .wa-key i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
 .wa .wa-bar { display: grid; grid-template-columns: minmax(0, 150px) minmax(0, 1fr) 48px; gap: 10px; align-items: center; font-size: 13px; }
 .wa .wa-bar span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* A picture or video on a template: shown in the bubble, and beside the draft in Today */
+.wa-bub.has-media { padding-top: 4px; width: min(260px, 88%); }
+.wa-media { display: block; width: 100%; max-height: 240px; object-fit: cover; margin-bottom: 6px; border-radius: 6px; background: #d9d4cc; }
+.wa-media-wait { aspect-ratio: 4 / 3; }
+.wa-mdrop { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 16px; border: 1.5px dashed var(--line-2); border-radius: 10px; text-align: center; cursor: pointer; font-weight: 400; }
+.wa-mdrop:hover, .wa-mdrop:focus-within { border-color: var(--ink); background: var(--surface-2); }
+.wa-mfile { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border: 1px solid var(--line-2); border-radius: 8px; font-weight: 400; }
+.wa-mfile > span { min-width: 0; overflow-wrap: anywhere; font-size: 13px; }
+.wa-mfile label.btn { cursor: pointer; }
+.wa .wa-attach { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; align-items: start; padding: 10px; border: 1px solid var(--accent-line, var(--line-2)); border-radius: 10px; background: var(--accent-tint-2, var(--surface-2)); }
+.wa .wa-attach .wa-media { max-height: 96px; margin: 0; }
+.wa .wa-attach > div { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.wa .wa-attach b { font-size: 13px; }
+@media (max-width: 520px) { .wa .wa-attach { grid-template-columns: minmax(0, 1fr); } }
