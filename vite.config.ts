@@ -81,6 +81,8 @@ export default defineConfig({
     port: 5174,
     proxy: {
       "/api": { target: API_TARGET, changeOrigin: true },
+      // Uploaded files the API links to (Zingle images) when it sends /media/... paths.
+      "/media": { target: API_TARGET, changeOrigin: true },
     },
   },
 });

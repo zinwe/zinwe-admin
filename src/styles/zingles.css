@@ -1,0 +1,176 @@
+/* Zingles (pages/ZinglesPage.tsx): the animated logo for special days. */
+
+.zg-now {
+  margin: 0 0 12px;
+}
+
+.zg-list {
+  overflow: hidden;
+}
+
+.zg-list .tbl td,
+.zg-list .tbl th[scope="row"] {
+  vertical-align: middle;
+}
+
+.zg-acts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+/* The website's top bar, white with black links and the orange Start free button. */
+.zg-nav {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  min-height: 64px;
+  padding: 0 20px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #ffffff;
+  color: #141210;
+  font-size: 14px;
+  overflow: hidden;
+}
+
+.zg-nav--compact {
+  min-height: 44px;
+  padding: 0 10px;
+  gap: 0;
+  border-radius: 8px;
+  width: max-content;
+}
+
+.zg-nav__logo {
+  display: block;
+  height: 28px;
+  width: auto;
+  flex: none;
+}
+
+.zg-nav__links {
+  display: flex;
+  gap: 20px;
+  font-weight: 500;
+}
+
+.zg-nav__right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-weight: 600;
+}
+
+.zg-nav__cta {
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: #f26a0a;
+  color: #141210;
+}
+
+@media (max-width: 640px) {
+  .zg-nav__links {
+    display: none;
+  }
+}
+
+/* Editor */
+.zg-dialog {
+  width: min(720px, calc(100vw - 32px));
+}
+
+.zg-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.zg-two {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .zg-two {
+    grid-template-columns: 1fr;
+  }
+}
+
+.zg-fl {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+  min-width: 0;
+}
+
+.zg-fl .inp {
+  width: 100%;
+  font-weight: 400;
+}
+
+.zg-fl .k {
+  font-weight: 400;
+}
+
+.zg-file {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  max-width: 100%;
+}
+
+.zg-err {
+  color: var(--danger);
+  font-weight: 400;
+}
+
+.zg-set {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.zg-note {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--accent-tint);
+  color: var(--accent-text);
+  font-size: 13px;
+}
+
+.zg-pv {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.zg-pv__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.zg-pv__head h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.zg-missing {
+  margin-right: auto;
+}

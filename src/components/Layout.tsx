@@ -66,6 +66,8 @@ const GROUPS: NavGroup[] = [
       { to: "/releases", label: "Releases", icon: "releases" },
       { to: "/testimonials", label: "Testimonials", icon: "testimonials" },
       { to: "/blog", label: "Blog", icon: "blog" },
+      // F-15: our animated logo for special days (Diwali, New Year...), scheduled.
+      { to: "/zingles", label: "Zingles", icon: "zingle" },
     ],
   },
   // Logs (FR-37): the dot = failed jobs nobody has handled (badges.logs_attention).
