@@ -336,6 +336,8 @@ export const getFeedback = () =>
 
 /** Issues owners report from the dashboard (Help → Report an issue), with an optional screenshot. */
 export type IssueStatus = "new" | "looking" | "fixed" | "closed";
+/** Who reported it (v1.3.3): an owner from the dashboard, a member from the Windows app, or staff from this panel. */
+export type IssueSource = "owner" | "member" | "staff";
 
 export interface IssueRow {
   id: number;
@@ -351,12 +353,30 @@ export interface IssueRow {
   replied_at: string | null;
   resolved_at: string | null;
   created_at: string;
-  customer: { id: number; email: string; full_name: string; company: string | null };
+  /** The owner's account; null on staff reports (they have no owner). */
+  customer: { id: number; email: string; full_name: string; company: string | null } | null;
   has_screenshot: boolean;
+  /** Older servers don't send these three: treat a missing source as "owner". */
+  source?: IssueSource;
+  /** Member reports: the member's name in the owner's team. */
+  member_name?: string | null;
+  /** Staff reports: who sent it. */
+  reporter_email?: string | null;
 }
 
-export const getIssues = () =>
-  request<{ counts: Record<IssueStatus, number>; rows: IssueRow[] }>("/api/admin/issues/");
+export const getIssues = (source?: IssueSource) =>
+  request<{ counts: Record<IssueStatus, number>; rows: IssueRow[] }>(
+    "/api/admin/issues/" + (source ? `?source=${source}` : ""),
+  );
+
+/** A problem a staff member found in this panel (multipart: description, page, screenshot?). */
+export function reportStaffIssue(input: { description: string; page: string; screenshot?: File | null }): Promise<{ id?: number }> {
+  const body = new FormData();
+  body.set("description", input.description);
+  body.set("page", input.page);
+  if (input.screenshot) body.set("screenshot", input.screenshot);
+  return request<{ id?: number }>("/api/admin/issues/report/", { method: "POST", body });
+}
 /** Fixed emails the owner (when they agreed): `email` is "" (none), "sent", or why it failed. */
 export const setIssueStatus = (id: number, status: IssueStatus) =>
   request<IssueRow & { email: string }>(`/api/admin/issues/${id}/`, { method: "PATCH", body: JSON.stringify({ status }) });

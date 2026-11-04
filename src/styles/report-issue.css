@@ -1,0 +1,36 @@
+/* Report an issue (components/ReportIssueDialog.tsx): staff report a problem in this panel. */
+.ri-dialog .modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ri-fl {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.ri-fl .inp,
+.ri-fl .ta {
+  width: 100%;
+  font-weight: 400;
+}
+
+.ri-fl .k {
+  font-weight: 400;
+}
+
+.ri-file {
+  font: inherit;
+  font-weight: 400;
+  font-size: 13px;
+}
+
+.ri-err {
+  color: var(--danger);
+  font-weight: 400;
+}

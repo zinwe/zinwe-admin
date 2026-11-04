@@ -106,3 +106,32 @@
   gap: 10px;
   text-align: center;
 }
+
+/* v1.3.3: who reported it (Owner / Member / Staff), next to the status. */
+.iss__pills {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.pill.iss-src--owner {
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+  color: var(--ink);
+}
+
+.pill.iss-src--member {
+  background: var(--surface-2);
+  color: var(--ink-2);
+}
+
+.pill.iss-src--staff {
+  background: var(--ink);
+  color: var(--on-ink);
+}
+
+.iss-filter > .k {
+  align-self: center;
+  margin-right: 4px;
+}

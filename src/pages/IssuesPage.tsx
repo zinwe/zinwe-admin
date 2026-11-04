@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactElement } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   ApiError,
   fetchIssueScreenshot,
@@ -7,6 +7,7 @@ import {
   replyToIssue,
   setIssueStatus,
   type IssueRow,
+  type IssueSource,
   type IssueStatus,
 } from "../lib/api";
 import { refreshBadges } from "../lib/badges";
@@ -26,6 +27,24 @@ const STATUSES: [IssueStatus, string, string][] = [
 ];
 const LABEL = Object.fromEntries(STATUSES.map(([k, l]) => [k, l])) as Record<IssueStatus, string>;
 const TONE = Object.fromEntries(STATUSES.map(([k, , t]) => [k, t])) as Record<IssueStatus, string>;
+
+const SOURCES: [IssueSource, string][] = [
+  ["owner", "Owner"],
+  ["member", "Member"],
+  ["staff", "Staff"],
+];
+const SOURCE_LABEL = Object.fromEntries(SOURCES) as Record<IssueSource, string>;
+
+/** Older servers send no source: those are all owner reports from the dashboard. */
+const sourceOf = (row: IssueRow): IssueSource => row.source ?? "owner";
+
+/** Where it happened, in words: the dashboard page, the Windows app screen, or the admin page. */
+function whereOf(row: IssueRow): string {
+  const src = sourceOf(row);
+  if (src === "staff") return `Admin (${row.page || "/"})`;
+  if (src === "member") return row.page ? `Windows app → ${row.page}` : "Windows app";
+  return pageName(row.page || "/app");
+}
 
 /** "Chrome 131 · Windows · 1366x768 window" from what the browser sent. */
 function contextLine(c: Record<string, string>): string {
@@ -69,7 +88,17 @@ function IssueCard({ row, onChange }: { row: IssueRow; onChange: (row: IssueRow)
   const [showShot, setShowShot] = useState(false);
   const [reply, setReply] = useState("");
   const [busy, setBusy] = useState(false);
-  const who = row.customer.full_name || row.customer.email;
+  const src = sourceOf(row);
+  const customer = row.customer;
+  const ownerName = customer ? customer.full_name || customer.email : "";
+  // Email only reaches an owner who agreed; member and staff reports never email anyone.
+  const canEmail = src === "owner" && row.contact_ok && Boolean(customer);
+  const title =
+    src === "staff"
+      ? row.reporter_email || "Staff"
+      : src === "member"
+        ? `${row.member_name || "A member"}${customer ? ` · ${customer.company || ownerName}` : ""}`
+        : customer?.company || ownerName || "Customer";
 
   const move = async (status: IssueStatus) => {
     setBusy(true);
@@ -77,7 +106,7 @@ function IssueCard({ row, onChange }: { row: IssueRow; onChange: (row: IssueRow)
       const next = await setIssueStatus(row.id, status);
       onChange(next);
       refreshBadges();
-      if (next.email === "sent") toast(`Marked ${LABEL[status].toLowerCase()} and emailed ${row.customer.email}.`);
+      if (next.email === "sent") toast(`Marked ${LABEL[status].toLowerCase()} and emailed ${customer?.email ?? "them"}.`);
       else if (next.email) toast(`Marked ${LABEL[status].toLowerCase()}, but the email failed: ${next.email}`, "bad");
       else toast(`Marked ${LABEL[status].toLowerCase()}.`);
     } catch (err) {
@@ -92,7 +121,7 @@ function IssueCard({ row, onChange }: { row: IssueRow; onChange: (row: IssueRow)
       onChange(await replyToIssue(row.id, reply));
       setReply("");
       refreshBadges();
-      toast(`Reply emailed to ${row.customer.email}.`);
+      toast(`Reply emailed to ${customer?.email ?? "them"}.`);
     } catch (err) {
       toast(err instanceof ApiError ? err.message : "Couldn’t send the reply.", "bad");
     }
@@ -104,13 +133,21 @@ function IssueCard({ row, onChange }: { row: IssueRow; onChange: (row: IssueRow)
       <header className="iss__head">
         <div>
           <h2 id={`iss-${row.id}`}>
-            #{row.id} · {row.customer.company || who}
+            #{row.id} · {title}
           </h2>
           <span className="k">
-            <Link to={`/subscribers?open=${row.customer.id}`}>{who}</Link> · {pageName(row.page || "/app")} · {dayTime(row.created_at)}
+            {customer ? (
+              <>
+                <Link to={`/subscribers?open=${customer.id}`}>{src === "member" ? `Team of ${ownerName}` : ownerName}</Link> ·{" "}
+              </>
+            ) : null}
+            {whereOf(row)} · {dayTime(row.created_at)}
           </span>
         </div>
-        <span className={`pill ${TONE[row.status]}`}>{LABEL[row.status]}</span>
+        <span className="iss__pills">
+          <span className={`pill iss-src--${src}`}>{SOURCE_LABEL[src]}</span>
+          <span className={`pill ${TONE[row.status]}`}>{LABEL[row.status]}</span>
+        </span>
       </header>
 
       <p className="iss__text">{row.description}</p>
@@ -149,14 +186,18 @@ function IssueCard({ row, onChange }: { row: IssueRow; onChange: (row: IssueRow)
             </button>
           ))}
         </div>
-        {row.contact_ok ? (
+        {canEmail ? (
           <span className="k">Marking it Fixed emails them.</span>
+        ) : src === "staff" ? (
+          <span className="k">Reported by staff: no email goes out.</span>
+        ) : src === "member" ? (
+          <span className="k">Sent from a member’s Windows app: no email goes out.</span>
         ) : (
           <span className="k">They asked not to get emails about this report.</span>
         )}
       </div>
 
-      {row.contact_ok ? (
+      {canEmail ? (
         <div className="iss__write">
           <label className="fl">
             Reply by email
@@ -184,12 +225,24 @@ function IssueCard({ row, onChange }: { row: IssueRow; onChange: (row: IssueRow)
  * (New → Looking into it → Fixed / Closed); Fixed and replies email the owner when they agreed.
  */
 export function IssuesPage(): ReactElement {
-  const loader = useCallback(() => getIssues(), []);
+  const [params, setParams] = useSearchParams();
+  const rawSource = params.get("source");
+  const source = SOURCES.some(([k]) => k === rawSource) ? (rawSource as IssueSource) : null;
+  const loader = useCallback(() => getIssues(source ?? undefined), [source]);
   const { data, error, pending, reload, setData } = useLoad(loader);
   const [filter, setFilter] = useState<IssueStatus | "open" | "all">("open");
+  const pickSource = (next: IssueSource | null) => {
+    const p = new URLSearchParams(params);
+    if (next) p.set("source", next);
+    else p.delete("source");
+    setParams(p, { replace: true });
+  };
 
-  const rows = (data?.rows ?? []).filter((r) =>
-    filter === "all" ? true : filter === "open" ? r.status === "new" || r.status === "looking" : r.status === filter,
+  const rows = (data?.rows ?? []).filter(
+    (r) =>
+      // An older server ignores ?source=: filter here too.
+      (!source || sourceOf(r) === source) &&
+      (filter === "all" ? true : filter === "open" ? r.status === "new" || r.status === "looking" : r.status === filter),
   );
   const counts = data?.counts;
   const update = (next: IssueRow) => {
@@ -207,10 +260,18 @@ export function IssuesPage(): ReactElement {
     <>
       <PageHeader
         title="Issues"
-        subtitle="Problems customers reported from their dashboard, with a screenshot and their browser details. Reproduce, fix, then mark Fixed: they get an email."
+        subtitle="Problems owners reported from their dashboard, members from the Windows app and staff from this panel. Reproduce, fix, then mark Fixed: owners who agreed get an email."
         onReload={reload}
         pending={pending}
       />
+      <div className="fr iss-filter" role="group" aria-label="Reported by">
+        <span className="k">From</span>
+        {([[null, "Everyone"], ...SOURCES] as [IssueSource | null, string][]).map(([k, l]) => (
+          <button key={l} type="button" className={`chip${source === k ? " on" : ""}`} aria-pressed={source === k} onClick={() => pickSource(k)}>
+            {l}
+          </button>
+        ))}
+      </div>
       <div className="fr iss-filter" role="group" aria-label="Show">
         {([["open", "Open"], ...STATUSES.map(([k, l]) => [k, l]), ["all", "All"]] as [typeof filter, string][]).map(([k, l]) => (
           <button key={k} type="button" className={`chip${filter === k ? " on" : ""}`} onClick={() => setFilter(k)}>
@@ -240,7 +301,9 @@ export function IssuesPage(): ReactElement {
       ) : (
         <section className="card iss-empty">
           <b>{filter === "open" ? "No open issues" : "Nothing here"}</b>
-          <span>Reports from Help → Report an issue in the customer dashboard show up here.</span>
+          <span>
+            Reports from Report an issue in the dashboard, the Windows app and this panel’s menu show up here.
+          </span>
         </section>
       )}
     </>

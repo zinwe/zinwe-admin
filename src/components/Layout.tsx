@@ -5,6 +5,7 @@ import { BADGES_EVENT } from "../lib/badges";
 import { useAdminEnv } from "../lib/env";
 import { BrandLogo, DevPill } from "./BrandLogo";
 import { Icon, type IconName } from "./icons";
+import { ReportIssueDialog } from "./ReportIssueDialog";
 
 type BadgeKey = "payments_waiting" | "support_waiting" | "forms_new" | "feedback_unread" | "logs_attention" | "issues_new";
 
@@ -154,7 +155,8 @@ export function Layout({
   const docs = useDocsAvailable() || Boolean(me.has_docs);
   const dev = useAdminEnv() === "dev";
   const [open, setOpen] = useState(false);
-  const { pathname, hash } = useLocation();
+  const [reporting, setReporting] = useState(false);
+  const { pathname, search, hash } = useLocation();
   const menuRef = useRef<HTMLButtonElement>(null);
   const linksRef = useRef<HTMLDivElement>(null);
 
@@ -242,6 +244,17 @@ export function Layout({
                   <span className="zan__email">{me.email}</span>
                 </span>
               </div>
+              <button
+                type="button"
+                className="zan-out"
+                onClick={() => {
+                  setOpen(false);
+                  setReporting(true);
+                }}
+              >
+                <Icon name="warn" />
+                Report an issue
+              </button>
               <button type="button" className="zan-out" onClick={onSignOut}>
                 <Icon name="signOut" />
                 Sign out
@@ -252,6 +265,7 @@ export function Layout({
       </div>
 
       <main className="zmain">{children}</main>
+      {reporting ? <ReportIssueDialog page={pathname + search} onClose={() => setReporting(false)} /> : null}
     </div>
   );
 }
