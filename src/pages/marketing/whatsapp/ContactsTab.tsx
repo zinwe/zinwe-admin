@@ -1,9 +1,10 @@
 import { Fragment, useRef, useState, type DragEvent, type ReactElement } from "react";
 import { Modal } from "../../../components/Modal";
 import { useToast } from "../../../components/Toast";
+import { ApiError } from "../../../lib/api";
 import {
-  actOn, addWaFile, deleteWaContact, downloadWaTemplate, getWaContact, patchWaContact, reviewWaFile,
-  type WaCampaign, type WaChoice, type WaContact, type WaFileRow, type WaStatus, type WaTrack,
+  actOn, addWaContact, addWaFile, deleteWaContact, downloadWaTemplate, getWaContact, patchWaContact, reviewWaFile,
+  type WaCampaign, type WaChoice, type WaContact, type WaFileRow, type WaNewContact, type WaStatus, type WaTrack,
 } from "../../../lib/whatsappApi";
 import { Bubble, errText, nameOf, TRACK_LABEL, when, WaPill, WA_STATUS } from "./shared";
 
@@ -62,7 +63,7 @@ function Upload({ campaigns, onAdded }: { campaigns: WaCampaign[]; onAdded: () =
     const locked = rows.filter((r) => r.result === "locked" && choices[r.row]?.include).length;
     const segments = [...new Set(rows.map((r) => r.segment).filter(Boolean))];
     return (
-      <section className="card editor">
+      <div className="editor">
         <div className="fighead"><h2>Check each row</h2><span className="k">{file?.name} · {keep} to add{locked ? `, ${locked} of them locked until they opt in` : ""}</span></div>
         <div className="scroll">
           <table className="tbl">
@@ -99,11 +100,11 @@ function Upload({ campaigns, onAdded }: { campaigns: WaCampaign[]; onAdded: () =
           <button type="button" className="btn" disabled={busy} onClick={() => { setRows(null); setFile(null); }}>Choose another file</button>
           <button type="button" className="btn dark" disabled={busy || !keep} onClick={() => void add()}>{keep ? `Add ${keep} contact${keep === 1 ? "" : "s"}` : "Nothing to add"}</button>
         </div>
-      </section>
+      </div>
     );
   }
   return (
-    <section className="card editor">
+    <div className="editor">
       <div className="fighead">
         <h2>Upload a contact sheet</h2>
         <button type="button" className="btn sm" onClick={() => void downloadWaTemplate().catch(() => toast("Couldn't download the template.", "bad"))}>Download template</button>
@@ -118,7 +119,118 @@ function Upload({ campaigns, onAdded }: { campaigns: WaCampaign[]; onAdded: () =
         <span className="k">.xlsx or .csv. Phone with country code, or a 10-digit number for India or the USA. You check every row before anything is added. Rows without opt-in are added locked: Zinwe drafts nothing for them until you mark them opted in. Numbers that asked to stop are always skipped.</span>
       </label>
       {problem ? <span className="aferr" role="alert">{problem}</span> : null}
-    </section>
+    </div>
+  );
+}
+
+const EMPTY: WaNewContact = {
+  firm: "", phone: "", segment: "", country: "India", city: "", first_name: "", source: "", campaign: null,
+  opted_in: false, opt_in_note: "", notes: "",
+};
+
+/**
+ * One contact by hand. "Save and add next" keeps segment, country, city, source, campaign and opt-in, so a run of
+ * businesses from one list goes in fast; only the business, phone, first name and notes clear.
+ */
+function AddOne({ campaigns, segments, onAdded, onClose }: { campaigns: WaCampaign[]; segments: string[]; onAdded: () => void; onClose: () => void }): ReactElement {
+  const toast = useToast();
+  const first = useRef<HTMLInputElement>(null);
+  const [f, setF] = useState<WaNewContact>(EMPTY);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+  const [added, setAdded] = useState<string[]>([]);
+  const set = (patch: Partial<WaNewContact>) => {
+    setF((x) => ({ ...x, ...patch }));
+    setErrors((e) => {
+      const next = { ...e };
+      for (const k of Object.keys(patch)) delete next[k];
+      return next;
+    });
+  };
+  const save = async (next: boolean) => {
+    setBusy(true);
+    try {
+      const c = await addWaContact(f);
+      onAdded();
+      setAdded((a) => [c.firm, ...a]);
+      toast(`${c.firm} added${c.opted_in ? "" : ", locked until they opt in"}. Nothing was sent.`);
+      if (next) {
+        setF((x) => ({ ...x, firm: "", phone: "", first_name: "", notes: "" }));
+        setErrors({});
+        first.current?.focus();
+      } else onClose();
+    } catch (err) {
+      if (err instanceof ApiError && Object.keys(err.fields).length) setErrors(err.fields);
+      else toast(errText(err, "Couldn't add this contact."), "bad");
+    }
+    setBusy(false);
+  };
+  const field = (key: keyof WaNewContact, label: string, input: ReactElement, help?: string) => (
+    <label className={"fl" + (errors[key] ? " has-err" : "")}>
+      {label}
+      {input}
+      {errors[key] ? <span className="aferr" role="alert">{errors[key]}</span> : help ? <span className="k">{help}</span> : null}
+    </label>
+  );
+  const ready = f.firm.trim() && f.phone.trim() && f.segment.trim() && f.city.trim();
+  return (
+    <form className="editor wa-addone" noValidate onSubmit={(e) => { e.preventDefault(); void save(true); }}>
+      <div className="wa-addone__grid">
+        {field("firm", "Business name *", <input ref={first} className="inp" maxLength={160} autoFocus value={f.firm} onChange={(e) => set({ firm: e.target.value })} />)}
+        {field("phone", "WhatsApp number *", <input className="inp" inputMode="tel" maxLength={30} placeholder="+91 98100 00000" value={f.phone} onChange={(e) => set({ phone: e.target.value })} />, "Country code, or 10 digits for India or the USA")}
+        {field("first_name", "First name", <input className="inp" maxLength={80} value={f.first_name} onChange={(e) => set({ first_name: e.target.value })} />, "Only if you know the person’s name")}
+        {field("segment", "Segment *", <input className="inp" list="wa-add-segments" maxLength={120} placeholder="Example: Digital marketing agency" value={f.segment} onChange={(e) => set({ segment: e.target.value })} />)}
+        {field("country", "Country *", (
+          <select className="inp" value={f.country} onChange={(e) => set({ country: e.target.value as WaNewContact["country"] })}>
+            <option>India</option>
+            <option>USA</option>
+          </select>
+        ))}
+        {field("city", "City *", <input className="inp" maxLength={80} value={f.city} onChange={(e) => set({ city: e.target.value })} />)}
+        {field("source", "Where you found them", <input className="inp" maxLength={160} placeholder="Example: LinkedIn, referral from Amit" value={f.source} onChange={(e) => set({ source: e.target.value })} />)}
+        {field("campaign", "Campaign", (
+          <select className="inp" value={f.campaign ?? 0} onChange={(e) => set({ campaign: Number(e.target.value) || null })}>
+            <option value={0}>No campaign yet</option>
+            {campaigns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        ))}
+      </div>
+      {field("notes", "Notes for the first message", <textarea className="inp" rows={2} maxLength={500} placeholder="Example: just opened a second office in Pune" value={f.notes} onChange={(e) => set({ notes: e.target.value })} />, "Used for the personal first line. Only true things.")}
+      <div className="wa-addone__optin">
+        <label className="wa-check">
+          <input type="checkbox" checked={f.opted_in} onChange={(e) => set({ opted_in: e.target.checked })} />
+          <span><b>They agreed to hear from us on WhatsApp</b> <span className="k">Replied to an email, said yes on LinkedIn, or were introduced</span></span>
+        </label>
+        {f.opted_in ? field("opt_in_note", "How did they agree?", <input className="inp" maxLength={200} placeholder="Example: said yes by email on 5 Nov" value={f.opt_in_note} onChange={(e) => set({ opt_in_note: e.target.value })} />)
+          : <span className="k">Without this they’re added locked: Zinwe drafts nothing for them until you mark them opted in.</span>}
+      </div>
+      <datalist id="wa-add-segments">{segments.map((s) => <option key={s} value={s} />)}</datalist>
+      <div className="fr between">
+        <span className="k">{added.length ? `${added.length} added: ${added.slice(0, 3).join(", ")}${added.length > 3 ? "…" : ""}` : "Nothing is sent when you add a contact."}</span>
+        <div className="fr">
+          <button type="button" className="btn" disabled={busy || !ready} onClick={() => void save(false)}>Save and close</button>
+          <button type="submit" className="btn dark" disabled={busy || !ready}>Save and add next</button>
+        </div>
+      </div>
+    </form>
+  );
+}
+
+/** One dialog for both ways in: one contact by hand, or a whole sheet. */
+function AddContacts({ campaigns, segments, onAdded, onClose }: { campaigns: WaCampaign[]; segments: string[]; onAdded: () => void; onClose: () => void }): ReactElement {
+  const [tab, setTab] = useState<"one" | "sheet">("one");
+  return (
+    <Modal title="Add contacts" subtitle="Nothing is sent. Contacts wait in the list until a campaign is live." onClose={onClose}>
+      <div className="mk wa-addbox">
+        <div className="seg" role="tablist" aria-label="How to add">
+          <button type="button" role="tab" aria-selected={tab === "one"} className={tab === "one" ? "on" : ""} onClick={() => setTab("one")}>Add one</button>
+          <button type="button" role="tab" aria-selected={tab === "sheet"} className={tab === "sheet" ? "on" : ""} onClick={() => setTab("sheet")}>Upload a sheet</button>
+        </div>
+        {tab === "one"
+          ? <AddOne campaigns={campaigns} segments={segments} onAdded={onAdded} onClose={onClose} />
+          : <Upload campaigns={campaigns} onAdded={() => { onAdded(); onClose(); }} />}
+      </div>
+    </Modal>
   );
 }
 
@@ -235,15 +347,16 @@ export function ContactsTab({ contacts, campaigns, reload }: { contacts: WaConta
   const [seg, setSeg] = useState("");
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(0);
+  const [adding, setAdding] = useState(false);
   const test = VIEWS.find((v) => v[0] === view)?.[2] ?? (() => true);
   const segments = [...new Set(contacts.map((c) => c.segment))].sort();
   const needle = q.trim().toLowerCase();
   const rows = contacts.filter((c) => test(c) && (!seg || c.segment === seg) && (!needle || `${c.firm} ${c.first_name} ${c.phone} ${c.city}`.toLowerCase().includes(needle)));
   return (
     <>
-      <Upload campaigns={campaigns} onAdded={reload} />
       <section className="card finder" aria-label="Find contacts">
         <div className="fr">
+          <button type="button" className="btn dark" onClick={() => setAdding(true)}>Add contacts</button>
           <div className="search"><input type="search" className="inp" aria-label="Search contacts" placeholder="Search business, name, phone or city" value={q} onChange={(e) => setQ(e.target.value)} /></div>
           <select className={"inp" + (seg ? " set" : "")} aria-label="Segment" value={seg} onChange={(e) => setSeg(e.target.value)}>
             <option value="">All segments</option>
@@ -273,8 +386,9 @@ export function ContactsTab({ contacts, campaigns, reload }: { contacts: WaConta
             </tbody>
           </table>
         </div>
-        {rows.length ? null : <div className="empty">{contacts.length ? "No contacts match." : "No contacts yet. Upload a sheet above."}</div>}
+        {rows.length ? null : <div className="empty">{contacts.length ? "No contacts match." : "No contacts yet. Use Add contacts to type one in or upload a sheet."}</div>}
       </section>
+      {adding ? <AddContacts campaigns={campaigns} segments={segments} onAdded={reload} onClose={() => setAdding(false)} /> : null}
       {open ? <ContactDrawer id={open} campaigns={campaigns} onClose={() => setOpen(0)} onChanged={reload} /> : null}
     </>
   );

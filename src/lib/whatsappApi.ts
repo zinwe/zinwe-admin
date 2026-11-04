@@ -140,6 +140,25 @@ const post = (body: unknown) => ({ method: "POST", body: JSON.stringify(body) })
 
 export const getToday = () => request<WaToday>(`${BASE}/today/`);
 export const getWaContacts = () => request<WaContact[]>(`${BASE}/contacts/`);
+
+/** One contact typed in the admin. Not opted in = added locked, as from a sheet. */
+export interface WaNewContact {
+  firm: string;
+  phone: string;
+  segment: string;
+  country: "India" | "USA";
+  city: string;
+  first_name: string;
+  source: string;
+  campaign: number | null;
+  opted_in: boolean;
+  /** How they agreed, when opted in. */
+  opt_in_note: string;
+  /** Saved as Useful Info notes, for the personal first line. */
+  notes: string;
+}
+/** 400 carries a message per field (ApiError.fields): firm, phone, segment, country, city, campaign. */
+export const addWaContact = (c: WaNewContact) => request<WaContact>(`${BASE}/contacts/`, post(c));
 export const getWaContact = (id: number) => request<WaContact>(`${BASE}/contacts/${id}/`);
 export const patchWaContact = (id: number, patch: Partial<Pick<WaContact, "campaign" | "first_name" | "firm" | "segment" | "city" | "info" | "track">>) =>
   request<WaContact>(`${BASE}/contacts/${id}/`, { method: "PATCH", body: JSON.stringify(patch) });

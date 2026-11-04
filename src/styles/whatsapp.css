@@ -48,3 +48,15 @@
 .wa .wa-attach > div { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .wa .wa-attach b { font-size: 13px; }
 @media (max-width: 520px) { .wa .wa-attach { grid-template-columns: minmax(0, 1fr); } }
+
+/* Add contacts dialog (ContactsTab AddContacts): Add one | Upload a sheet. */
+.wa-addbox { display: flex; flex-direction: column; gap: 16px; }
+.wa-addbox .seg { align-self: flex-start; }
+.wa-addbox .editor { padding: 0; }
+.wa-addone__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
+.wa-addone .fl.has-err .inp { border-color: var(--bad); }
+.wa-addone__optin { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; }
+.wa-check { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; cursor: pointer; }
+.wa-check input { margin-top: 3px; width: 16px; height: 16px; accent-color: var(--accent); }
+.wa-check .k { display: block; }
+@media (max-width: 640px) { .wa-addone__grid { grid-template-columns: 1fr; } }

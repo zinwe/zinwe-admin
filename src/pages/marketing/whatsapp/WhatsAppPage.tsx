@@ -16,7 +16,7 @@ import "../../../styles/whatsapp.css";
 
 const SUB: Record<string, string> = {
   today: "Today's replies to answer and messages to send. Zinwe drafts each one; you send it yourself from WhatsApp.",
-  contacts: "Everyone you may message on WhatsApp. Upload a sheet, check each row, then choose what happens to each contact.",
+  contacts: "Everyone you may message on WhatsApp. Add them one at a time or from a sheet, then choose what happens to each contact.",
   campaigns: "Each campaign sends one message sequence to one target audience from Persona.",
   templates: "Message drafts, the way they land in a WhatsApp chat. Drafts start from these.",
   analytics: "All WhatsApp campaigns together: what was sent, who replied and what they did next.",
