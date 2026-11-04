@@ -608,10 +608,12 @@ export type PricingPatch = Partial<Record<PricingCurrency, RegionPriceInput>> & 
 /** A discount that takes the price out of its band answers 400 {"discount_percent": ["Puts the price at ₹X, outside ₹A–₹B."]}. */
 export const updatePricing = (code: string, body: PricingPatch) => request<PlanPricing>(`/api/admin/pricing/${encodeURIComponent(code)}/`, { method: "PATCH", body: JSON.stringify(body) });
 
-// --- Announcements (notification bars on the customer dashboard and the website) -------------
+// --- Announcements (notification bars on the customer dashboard and the website, and dashboard pop-ups) ---
 
-export type AnnouncementKind = "offer" | "discount" | "news" | "version" | "maintenance";
-export type AnnouncementPlacement = "dashboard" | "website" | "both";
+/** `wish` (v1.3.3): festival and occasion wishes, shown to every plan. */
+export type AnnouncementKind = "offer" | "discount" | "news" | "version" | "maintenance" | "wish";
+/** `popup` (v1.3.3): a pop-up over the customer dashboard (dashboard only), on the server's rhythm. */
+export type AnnouncementPlacement = "dashboard" | "website" | "both" | "popup";
 export type AnnouncementAudience = "everyone" | "free" | "paid" | "plans" | "owners";
 /** live = showing now · scheduled = starts later · ended = past its end · off = switched off. */
 export type AnnouncementStatus = "live" | "scheduled" | "ended" | "off";

@@ -41,6 +41,7 @@ const KINDS: [AnnouncementKind, string][] = [
   ["discount", "Discount"],
   ["maintenance", "Maintenance"],
   ["version", "New release"],
+  ["wish", "Wish"],
 ];
 const KIND_LABEL = Object.fromEntries(KINDS) as Record<AnnouncementKind, string>;
 
@@ -50,6 +51,7 @@ const KIND_PILL: Record<AnnouncementKind, string> = {
   discount: "an-k-offer",
   maintenance: "an-k-maint",
   version: "an-k-rel",
+  wish: "an-k-wish",
 };
 
 const KIND_ICON: Record<AnnouncementKind, string> = {
@@ -58,6 +60,8 @@ const KIND_ICON: Record<AnnouncementKind, string> = {
   discount: "M20 12l-8 8-9-9V3h8zM7.5 7.5h.01",
   maintenance: "M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.5-.5-.5-2.5z",
   version: "M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5z",
+  // A small diya (oil lamp) with its flame: festival wishes.
+  wish: "M3 13h18a9 5 0 0 1-18 0zM12 3c1.6 2 2 3.4 2 4.5a2 2 0 0 1-4 0C10 6.4 10.4 5 12 3z",
 };
 const SYS_ICON = {
   warn: "M12 3.5L2.5 20h19zM12 10v4.5M12 17.5h.01",
@@ -73,6 +77,7 @@ const KIND_BAR: Record<AnnouncementKind, [string, string, string, string]> = {
   discount: ["#141210", "#FFFFFF", "#FFFFFF", "#141210"],
   maintenance: ["#FDEBDC", "#8A3A04", "#8A3A04", "#FFFFFF"],
   version: ["#F5F5F5", "#141210", "#141210", "#FFFFFF"],
+  wish: ["#FFFFFF", "#141210", "#F26A0A", "#FFFFFF"],
 };
 
 const TITLE_PH: Record<AnnouncementKind, string> = {
@@ -81,12 +86,14 @@ const TITLE_PH: Record<AnnouncementKind, string> = {
   discount: "e.g. 20% off Businesses until 15 Nov",
   maintenance: "e.g. Short maintenance on Sunday, 02:00–02:30 IST",
   version: "e.g. Windows app 1.3.0 is out",
+  wish: "e.g. Happy Diwali from all of us at Zinwe",
 };
 
 const PLACEMENTS: [AnnouncementPlacement, string][] = [
   ["dashboard", "Dashboard"],
   ["website", "Website"],
   ["both", "Dashboard + website"],
+  ["popup", "Pop-up (dashboard)"],
 ];
 const PLACEMENT_LABEL = Object.fromEntries(PLACEMENTS) as Record<AnnouncementPlacement, string>;
 
@@ -682,6 +689,13 @@ export function AnnouncementsPage(): ReactElement {
                 </Opt>
               ))}
             </div>
+            {form.placement === "popup" ? (
+              <p className="an-note">
+                A pop-up opens over the dashboard, at most one a day. Each owner sees it at their first login after you send it, then
+                again after 2 days, then after a week, and never more than 3 times; closing it stops it. Paid plans only see Info, New
+                release, Wish and Maintenance pop-ups; offers and discounts go to free plans.
+              </p>
+            ) : null}
             {err("placement")}
           </fieldset>
 
@@ -1119,6 +1133,8 @@ function Preview({
 }): ReactElement {
   const winner = previewAs === "normal" ? "ann" : previewAs;
   const wi = BAR_LADDER.findIndex((l) => l.key === winner);
+  // Pop-ups don't take part in the bar ladder: they open over the page.
+  const popup = form.placement === "popup" && previewAs === "normal";
   let bar: ReactElement;
   if (previewAs === "normal") {
     const [bg, fg, bbg, bfg] = KIND_BAR[form.kind];
@@ -1198,8 +1214,9 @@ function Preview({
               <span className="an-pv__line" />
               <span className="an-pv__line" />
             </div>
-            <div className="an-pv__main">
-              {bar}
+            <div className={"an-pv__main" + (popup ? " an-pv__main--popup" : "")}>
+              {popup ? null : bar}
+              {popup ? <PopupPreview form={form} /> : null}
               <div aria-hidden="true" className="an-pv__content">
                 <span className="an-pv__hello">Good afternoon, {PREVIEW_OWNER}</span>
                 <div className="an-pv__tiles">
@@ -1238,6 +1255,26 @@ function Preview({
         </ol>
       </div>
     </section>
+  );
+}
+
+/** The dashboard pop-up (F-11): a small card over the page with the headline, message and button. */
+function PopupPreview({ form }: { form: AnnouncementInput }): ReactElement {
+  const btn = form.cta_label.trim() || (form.offer_plan ? offerButton(form.offer_price_inr) : "");
+  return (
+    <div className="an-pv__popup">
+      <div className="an-pv__popcard">
+        <span aria-hidden="true" className="an-pv__x">
+          <Icon name="close" size={14} strokeWidth={2} />
+        </span>
+        <span className="an-pv__popicon">
+          <PathIcon d={KIND_ICON[form.kind]} size={20} strokeWidth={1.8} />
+        </span>
+        <b style={{ opacity: form.title.trim() ? 1 : 0.6 }}>{form.title.trim() || "Your headline"}</b>
+        {form.body.trim() ? <span>{form.body.trim()}</span> : null}
+        {btn ? <span className="an-pv__popbtn">{btn}</span> : null}
+      </div>
+    </div>
   );
 }
 

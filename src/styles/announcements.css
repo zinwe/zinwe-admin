@@ -505,3 +505,63 @@
     flex-wrap: wrap;
   }
 }
+
+/* F-11 (v1.3.3): Wish kind and the dashboard pop-up. */
+.pill.an-k-wish {
+  background: var(--accent-tint);
+  color: var(--accent-text);
+}
+.an-note {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-3);
+}
+.an-pv__main--popup {
+  position: relative;
+}
+.an-pv__popup {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(20, 18, 16, 0.35);
+}
+.an-pv__popcard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  width: min(280px, 100%);
+  padding: 18px;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #141210;
+  font-size: 13px;
+  line-height: 1.45;
+  box-shadow: 0 12px 32px rgba(20, 18, 16, 0.18);
+}
+.an-pv__popcard b {
+  font-size: 15px;
+}
+.an-pv__popcard .an-pv__x {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+.an-pv__popicon {
+  display: inline-flex;
+  color: #f26a0a;
+}
+.an-pv__popbtn {
+  margin-top: 4px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  background: #141210;
+  color: #ffffff;
+  font-weight: 600;
+}
