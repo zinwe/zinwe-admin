@@ -63,6 +63,10 @@ export interface WaStats {
   interested: number;
   signed: number;
   stopped: number;
+  /** Opted in and not asked to stop: who can get a message at all. */
+  opted_in?: number;
+  /** Opted in and not messaged yet: the first messages waiting. */
+  ready?: number;
 }
 
 export interface WaCampaign {
@@ -216,6 +220,9 @@ export const saveWaCampaign = (c: WaCampaign) =>
   c.id ? request<WaCampaign>(`${BASE}/campaigns/${c.id}/`, { method: "PATCH", body: JSON.stringify(c) }) : request<WaCampaign>(`${BASE}/campaigns/`, post(c));
 export const deleteWaCampaign = (id: number) => request<null>(`${BASE}/campaigns/${id}/`, { method: "DELETE" });
 export const waCampaignAction = (id: number, action: "start" | "pause") => request<WaCampaign>(`${BASE}/campaigns/${id}/${action}/`, { method: "POST" });
+/** Add contacts by hand. Only those not messaged yet and not stopped move; the rest come back as `skipped`. */
+export const addToWaCampaign = (id: number, ids: number[]) =>
+  request<{ added: number; skipped: number; campaign: WaCampaign }>(`${BASE}/campaigns/${id}/contacts/`, { method: "POST", body: JSON.stringify({ ids }) });
 
 export const getWaTemplates = () => request<WaTemplate[]>(`${BASE}/templates/`);
 export const saveWaTemplate = (t: WaTemplate) =>

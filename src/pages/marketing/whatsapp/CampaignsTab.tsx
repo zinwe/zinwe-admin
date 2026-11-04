@@ -1,11 +1,12 @@
 import { useState, type ReactElement } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ConfirmDialog } from "../../../components/ConfirmDialog";
+import { Modal } from "../../../components/Modal";
 import { useToast } from "../../../components/Toast";
 import type { Audience } from "../../../lib/marketingApi";
 import {
-  deleteWaCampaign, saveWaCampaign, waCampaignAction,
-  type WaCampaign, type WaContact, type WaGoal, type WaKind, type WaTemplate,
+  addToWaCampaign, deleteWaCampaign, saveWaCampaign, waCampaignAction,
+  type WaCampaign, type WaContact, type WaGoal, type WaKind, type WaStats, type WaTemplate,
 } from "../../../lib/whatsappApi";
 import { claudeCommand, OUTREACH_SKILL } from "./claudeCommand";
 import { Bubble, errText, sampleText } from "./shared";
@@ -55,8 +56,71 @@ const STEPS: [keyof WaCampaign & WaKind, string, string][] = [
   ["notnow", "If they say not now", "Close kindly, never again"],
 ];
 
-export function CampaignList({ campaigns }: { campaigns: WaCampaign[] }): ReactElement {
+const pct = (n: number, of: number) => (of ? `${Math.round((n / of) * 100)}%` : "–");
+const LANG_SHORT: Record<string, string> = { en: "English", hi: "Hinglish", ab: "English + Hinglish" };
+const codeOf = (name: string) => /^(?:90 days: )?([A-Z]{2}-\d+)\s+(.*)$/.exec(name);
+
+type Filter = "all" | "live" | "draft" | "paused" | "empty";
+
+/** What to do next with a campaign, in one button: the step that unblocks it. */
+function NextStep({ c }: { c: WaCampaign }): ReactElement {
+  const s = c.stats;
+  const to = `/marketing/whatsapp/campaigns/${c.id}`;
+  if (!s?.contacts) return <Link className="btn sm dark" to={`${to}#contacts`} onClick={(e) => e.stopPropagation()}>Add contacts</Link>;
+  if (!s.opted_in) return <Link className="btn sm" to="/marketing/whatsapp/contacts" onClick={(e) => e.stopPropagation()}>Get opt-ins</Link>;
+  if (c.status !== "live") return <Link className="btn sm dark" to={to} onClick={(e) => e.stopPropagation()}>Start</Link>;
+  return <Link className="btn sm" to="/marketing/whatsapp" onClick={(e) => e.stopPropagation()}>Open Today</Link>;
+}
+
+/** One campaign: what it says, who it reaches, how far it got, and the next step. */
+function CampaignRow({ c, templates }: { c: WaCampaign; templates: WaTemplate[] }): ReactElement {
   const navigate = useNavigate();
+  const s = c.stats ?? { contacts: 0, messaged: 0, replied: 0, interested: 0, signed: 0, stopped: 0 };
+  const m = codeOf(c.name);
+  const first = templates.find((t) => t.id === c.first);
+  const problem = first?.parts?.problem;
+  const status = c.status ?? "draft";
+  const steps: [string, number, number][] = [["Messaged", s.messaged, s.contacts], ["Replied", s.replied, s.messaged], ["Interested", s.interested, s.messaged], ["Signed up", s.signed, s.messaged]];
+  return (
+    <article className={`card wa-crow is-${status}${s.contacts ? "" : " is-empty"}`} onClick={() => navigate(`/marketing/whatsapp/campaigns/${c.id}`)}>
+      <div className="wa-crow__main">
+        <div className="wa-crow__title">
+          <span className={`wa-dot is-${status}`} aria-hidden="true" />
+          {m ? <span className="wa-code">{m[1]}</span> : null}
+          <Link to={`/marketing/whatsapp/campaigns/${c.id}`} onClick={(e) => e.stopPropagation()}>{m ? m[2] : c.name}</Link>
+          <span className={"pill " + STATUS[status][1]}>{STATUS[status][0]}</span>
+        </div>
+        {problem ? <p className="wa-crow__quote">“{problem}”</p> : null}
+        <div className="wa-crow__meta k">
+          <span>{LANG_SHORT[c.language ?? "en"]}</span>
+          <span>Day 0 · 3 · {c.touch3_days}</span>
+          <span>{c.daily_limit} a day</span>
+          <span>Goal: {c.goal}</span>
+        </div>
+      </div>
+      <div className="wa-crow__people">
+        <b className="num">{s.contacts}</b>
+        <span className="k">contacts</span>
+        <div className="wa-meter" aria-hidden="true"><i style={{ width: s.contacts ? `${Math.round(((s.opted_in ?? 0) / s.contacts) * 100)}%` : "0%" }} /></div>
+        <span className="k">{s.contacts ? `${s.opted_in ?? 0} opted in · ${s.ready ?? 0} ready` : "No contacts yet"}</span>
+      </div>
+      <ol className="wa-funnel" aria-label="Results">
+        {steps.map(([label, n, of]) => (
+          <li key={label}><b className="num">{n}</b><span className="k">{label}</span><span className="k wa-funnel__pct">{label === "Messaged" ? pct(n, of) + " of contacts" : pct(n, of)}</span></li>
+        ))}
+      </ol>
+      <div className="wa-crow__act"><NextStep c={c} /></div>
+    </article>
+  );
+}
+
+/**
+ * Campaigns at a glance (inspired by outreach tools like lemlist and Instantly, kept simple): a strip of what matters
+ * now, filters, then each audience's campaigns as rows that show the message, who it reaches, how far it got, and
+ * the one next step.
+ */
+export function CampaignList({ campaigns, templates }: { campaigns: WaCampaign[]; templates: WaTemplate[] }): ReactElement {
+  const [filter, setFilter] = useState<Filter>("all");
   if (!campaigns.length) {
     return (
       <section className="card empty">
@@ -66,31 +130,139 @@ export function CampaignList({ campaigns }: { campaigns: WaCampaign[] }): ReactE
       </section>
     );
   }
+  const sum = (k: keyof WaStats) => campaigns.reduce((a, c) => a + ((c.stats?.[k] as number | undefined) ?? 0), 0);
+  const live = campaigns.filter((c) => c.status === "live").length;
+  const empty = campaigns.filter((c) => !c.stats?.contacts).length;
+  const tests: Record<Filter, (c: WaCampaign) => boolean> = {
+    all: () => true, live: (c) => c.status === "live", draft: (c) => (c.status ?? "draft") === "draft",
+    paused: (c) => c.status === "paused", empty: (c) => !c.stats?.contacts,
+  };
+  const shown = campaigns.filter(tests[filter]).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+  const groups = [...new Set(shown.map((c) => c.audience_name || "No target audience"))];
+  const contacts = sum("contacts"), optedIn = sum("opted_in"), messaged = sum("messaged"), replied = sum("replied");
   return (
-    <section className="card tablebox">
-      <div className="scroll">
-        <table className="tbl">
-          <caption className="sr">WhatsApp campaigns</caption>
-          <thead><tr><th scope="col">Campaign</th><th scope="col">Status</th><th scope="col">Goal</th><th scope="col" className="num">Contacts</th><th scope="col" className="num">Messaged</th><th scope="col" className="num">Replied</th><th scope="col" className="num">Interested</th><th scope="col" className="num">Signed up</th></tr></thead>
-          <tbody>
-            {campaigns.map((c) => {
-              const s = c.stats;
-              return (
-                <tr key={c.id} className="click" onClick={() => navigate(`/marketing/whatsapp/campaigns/${c.id}`)}>
-                  <th scope="row"><Link className="cobtn" to={`/marketing/whatsapp/campaigns/${c.id}`} onClick={(e) => e.stopPropagation()}>{c.name}</Link><span className="k" style={{ display: "block" }}>{c.audience_name || "No target audience"}</span></th>
-                  <td><span className={"pill " + STATUS[c.status ?? "draft"][1]}>{STATUS[c.status ?? "draft"][0]}</span></td>
-                  <td>{c.goal}</td>
-                  <td className="num">{s?.contacts ?? 0}</td>
-                  <td className="num">{s?.messaged ?? 0}</td>
-                  <td className="num">{s?.replied ?? 0}</td>
-                  <td className="num">{s?.interested ?? 0}</td>
-                  <td className="num">{s?.signed ?? 0}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+    <>
+      <div className="wa-cstrip">
+        {([
+          [live ? `${live} live` : "None live", `${campaigns.length - live} draft or paused`],
+          [`${contacts}`, "contacts in campaigns"],
+          [`${optedIn}`, optedIn ? `opted in · ${pct(optedIn, contacts)}` : "opted in: nobody can be messaged yet"],
+          [`${messaged}`, `messaged · ${pct(replied, messaged)} replied`],
+        ] as [string, string][]).map(([v, l]) => (
+          <div key={l} className="card tile"><b className="num">{v}</b><span className="k">{l}</span></div>
+        ))}
       </div>
+      <div className="fr between wa-cfilter">
+        <div className="fr" role="group" aria-label="Show">
+          {([["all", "All"], ["live", "Live"], ["draft", "Draft"], ["paused", "Paused"], ["empty", "Needs contacts"]] as [Filter, string][]).map(([k, l]) => (
+            <button key={k} type="button" className={"chip" + (filter === k ? " on" : "")} aria-pressed={filter === k} onClick={() => setFilter(k)}>
+              {l} <span className="k">{campaigns.filter(tests[k]).length}</span>
+            </button>
+          ))}
+        </div>
+        {empty ? <span className="k">{empty} campaign{empty === 1 ? " has" : "s have"} no contacts: open it and use Add contacts, or delete it.</span> : null}
+      </div>
+      {groups.map((g) => {
+        const rows = shown.filter((c) => (c.audience_name || "No target audience") === g);
+        const gc = rows.reduce((a, c) => a + (c.stats?.contacts ?? 0), 0);
+        return (
+          <section key={g} className="wa-cgroup" aria-label={g}>
+            <header className="wa-cgroup__head"><h2>{g}</h2><span className="k">{rows.length} campaign{rows.length === 1 ? "" : "s"} · {gc} contacts</span></header>
+            {rows.map((c) => <CampaignRow key={c.id} c={c} templates={templates} />)}
+          </section>
+        );
+      })}
+      {shown.length ? null : <section className="card empty"><span>No campaigns here.</span></section>}
+    </>
+  );
+}
+
+/** Pick contacts to add to this campaign: unassigned first, or move ones from another campaign that haven't been messaged. */
+function ContactPicker({ campaign, contacts, onClose, onAdded }: { campaign: WaCampaign; contacts: WaContact[]; onClose: () => void; onAdded: () => void }): ReactElement {
+  const toast = useToast();
+  const [from, setFrom] = useState<"free" | "other">("free");
+  const [seg, setSeg] = useState("");
+  const [q, setQ] = useState("");
+  const [picked, setPicked] = useState<Set<number>>(new Set());
+  const [busy, setBusy] = useState(false);
+  const movable = (c: WaContact) => c.step === 0 && !c.yes_date && c.status !== "stop" && c.campaign !== campaign.id;
+  const pool = contacts.filter((c) => movable(c) && (from === "free" ? !c.campaign : !!c.campaign));
+  const segments = [...new Set(pool.map((c) => c.segment))].sort();
+  const needle = q.trim().toLowerCase();
+  const rows = pool.filter((c) => (!seg || c.segment === seg) && (!needle || `${c.firm} ${c.phone} ${c.city}`.toLowerCase().includes(needle)));
+  const all = rows.length > 0 && rows.every((c) => picked.has(c.id));
+  const toggle = (id: number) => setPicked((p) => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const add = async () => {
+    setBusy(true);
+    try {
+      const r = await addToWaCampaign(campaign.id as number, [...picked]);
+      toast(`${r.added} contact${r.added === 1 ? "" : "s"} added${r.skipped ? `, ${r.skipped} skipped (already messaged or stopped)` : ""}. Nothing was sent.`);
+      onAdded();
+      onClose();
+    } catch (err) {
+      toast(errText(err, "Couldn't add them."), "bad");
+      setBusy(false);
+    }
+  };
+  return (
+    <Modal title={`Add contacts to ${campaign.name}`} subtitle="Only contacts who haven’t had a message yet can join. Nothing is sent now." onClose={onClose}
+      footer={<><button type="button" className="btn" onClick={onClose}>Cancel</button><button type="button" className="btn dark" disabled={busy || !picked.size} onClick={() => void add()}>{picked.size ? `Add ${picked.size} contact${picked.size === 1 ? "" : "s"}` : "Pick contacts"}</button></>}>
+      <div className="mk wa-picker">
+        <div className="seg" role="tablist" aria-label="From">
+          <button type="button" role="tab" aria-selected={from === "free"} className={from === "free" ? "on" : ""} onClick={() => { setFrom("free"); setPicked(new Set()); }}>Not in a campaign <span className="k">{contacts.filter((c) => movable(c) && !c.campaign).length}</span></button>
+          <button type="button" role="tab" aria-selected={from === "other"} className={from === "other" ? "on" : ""} onClick={() => { setFrom("other"); setPicked(new Set()); }}>From other campaigns <span className="k">{contacts.filter((c) => movable(c) && !!c.campaign).length}</span></button>
+        </div>
+        <div className="fr">
+          <select className={"inp" + (seg ? " set" : "")} aria-label="Segment" value={seg} onChange={(e) => setSeg(e.target.value)}>
+            <option value="">All segments</option>
+            {segments.map((x) => <option key={x}>{x}</option>)}
+          </select>
+          <input type="search" className="inp" aria-label="Search" placeholder="Search business, phone or city" value={q} onChange={(e) => setQ(e.target.value)} />
+        </div>
+        <div className="scroll wa-picker__list">
+          <table className="tbl">
+            <thead><tr>
+              <th scope="col"><input type="checkbox" aria-label="Pick all shown" checked={all} onChange={() => setPicked((p) => { const n = new Set(p); rows.forEach((c) => (all ? n.delete(c.id) : n.add(c.id))); return n; })} /></th>
+              <th scope="col">Business</th><th scope="col">Segment</th><th scope="col">{from === "free" ? "City" : "Now in"}</th><th scope="col">Opt-in</th>
+            </tr></thead>
+            <tbody>
+              {rows.slice(0, 300).map((c) => (
+                <tr key={c.id} className="click" onClick={() => toggle(c.id)}>
+                  <td><input type="checkbox" aria-label={`Pick ${c.firm}`} checked={picked.has(c.id)} onChange={() => toggle(c.id)} onClick={(e) => e.stopPropagation()} /></td>
+                  <th scope="row">{c.short_name || c.firm}<span className="k" style={{ display: "block" }}>{c.phone}</span></th>
+                  <td>{c.segment}</td>
+                  <td className="k">{from === "free" ? c.city : c.campaign_name}</td>
+                  <td>{c.opted_in ? <span className="pill good">Opted in</span> : <span className="pill">Not yet</span>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {rows.length ? null : <div className="empty">{pool.length ? "No contacts match." : from === "free" ? "Every contact is in a campaign. Try From other campaigns." : "No contacts to move."}</div>}
+        </div>
+        <span className="k">{rows.length > 300 ? `Showing 300 of ${rows.length}: search or pick a segment to narrow it. ` : ""}Contacts already messaged stay in their campaign, so nobody gets two first messages.</span>
+      </div>
+    </Modal>
+  );
+}
+
+/** The campaign's contacts: how many, opted in, ready, and the way to add more by hand. */
+function CampaignContacts({ campaign, contacts, onChanged }: { campaign: WaCampaign; contacts: WaContact[]; onChanged: () => void }): ReactElement {
+  const [picking, setPicking] = useState(false);
+  const mine = contacts.filter((x) => x.campaign === campaign.id);
+  const opted = mine.filter((x) => x.opted_in && x.status !== "stop").length;
+  const ready = mine.filter((x) => x.opted_in && x.step === 0 && x.status === "ready").length;
+  return (
+    <section className="card afsec" id="contacts">
+      <div className="fighead"><h2>Contacts</h2><button type="button" className="btn dark sm" onClick={() => setPicking(true)}>Add contacts</button></div>
+      {mine.length ? (
+        <div className="wa-cstats">
+          <span><b className="num">{mine.length}</b> <span className="k">in this campaign</span></span>
+          <span><b className="num">{opted}</b> <span className="k">opted in</span></span>
+          <span><b className="num">{ready}</b> <span className="k">ready for a first message</span></span>
+        </div>
+      ) : <span className="k">No contacts yet. Add them here, or from Contacts (Add contacts, then pick this campaign).</span>}
+      {mine.length && !opted ? <span className="k">Nobody here is opted in yet, so nothing will be queued. Mark contacts opted in from Contacts as they agree.</span> : null}
+      {picking ? <ContactPicker campaign={campaign} contacts={contacts} onClose={() => setPicking(false)} onAdded={onChanged} /> : null}
     </section>
   );
 }
@@ -172,8 +344,8 @@ export function CampaignEditor({ campaign, templates, audiences, contacts, onSav
                 {audiences.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>
             </label>
-            <span className="k">Add contacts to this campaign in Contacts, by upload or one by one.</span>
           </section>
+          {campaign?.id ? <CampaignContacts campaign={campaign} contacts={contacts} onChanged={onSaved} /> : null}
           <section className="card afsec">
             <h2>Messages and sequence</h2>
             <label className="fl">Language <span className="k">Pick the English templates below; Hinglish and 50/50 send each one’s Hinglish version where it has one</span>
