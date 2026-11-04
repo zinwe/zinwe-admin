@@ -6,11 +6,12 @@ const BASE = "/api/admin/marketing/wa";
 
 export type WaStatus = "ready" | "messaged" | "replied" | "interested" | "signed" | "notnow" | "stop";
 export type WaKind = "first" | "followup" | "touch3" | "touch4" | "interested" | "question" | "notnow" | "nurture";
-export type WaMessageKind = "first" | "followup" | "touch" | "nurture" | "reply" | "theirs";
+export type WaMessageKind = "first" | "followup" | "touch" | "nurture" | "custom" | "reply" | "theirs";
 /** The after-YES sequence a contact is on ("" = only the messages every YES gets). */
 export type WaTrack = "" | "data" | "day" | "chat";
 /** What a person can mark as sent: a step of the sequence, or a reply. */
-export type WaSendKind = "first" | "followup" | "touch3" | "touch4" | "nurture" | "reply";
+/** custom = a one-off from Contacts → Send WhatsApp: it never moves the sequence. */
+export type WaSendKind = "first" | "followup" | "touch3" | "touch4" | "nurture" | "reply" | "custom";
 export type WaGoal = "Conversations" | "Free signups" | "Installs" | "Paid plans";
 
 export interface WaMessage {
@@ -134,7 +135,7 @@ export interface WaFileRow {
 }
 
 export interface WaToday {
-  queue: { kind: Exclude<WaSendKind, "reply">; template: string; contact: WaContact }[];
+  queue: { kind: Exclude<WaSendKind, "reply" | "custom">; template: string; contact: WaContact }[];
   replies: WaContact[];
   sent_today: number;
   stats: WaStats;
@@ -181,7 +182,8 @@ export const getWaContact = (id: number) => request<WaContact>(`${BASE}/contacts
 export const patchWaContact = (id: number, patch: Partial<Pick<WaContact, "campaign" | "first_name" | "firm" | "segment" | "city" | "info" | "track">>) =>
   request<WaContact>(`${BASE}/contacts/${id}/`, { method: "PATCH", body: JSON.stringify(patch) });
 export const deleteWaContact = (id: number) => request<null>(`${BASE}/contacts/${id}/`, { method: "DELETE" });
-export const draftFor = (id: number, kind: WaKind) => request<{ text: string; template: string; by: "claude" | "template"; media: WaMedia | null; creative?: string; notes?: string }>(`${BASE}/contacts/${id}/draft/`, post({ kind }));
+/** `template` picks any template for a one-off (Contacts → Send WhatsApp); without it the campaign's template of `kind`. */
+export const draftFor = (id: number, kind: WaKind, template?: number) => request<{ text: string; template: string; by: "claude" | "template"; media: WaMedia | null; creative?: string; notes?: string }>(`${BASE}/contacts/${id}/draft/`, post(template ? { kind, template } : { kind }));
 export const markSent = (id: number, kind: WaSendKind, text: string) => request<WaContact>(`${BASE}/contacts/${id}/sent/`, post({ kind, text }));
 export const logReply = (id: number, text: string) => request<WaContact>(`${BASE}/contacts/${id}/reply/`, post({ text }));
 export const actOn = (id: number, action: "interested" | "signed" | "notnow" | "stop" | "pause" | "resume" | "optin", note = "") => request<WaContact>(`${BASE}/contacts/${id}/act/`, post({ action, note }));

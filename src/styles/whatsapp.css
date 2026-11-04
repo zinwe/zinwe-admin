@@ -81,3 +81,8 @@
 .wa-claude { display: flex; flex-direction: column; gap: 10px; padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--line); }
 .wa-claude h2 { font-size: 15px; }
 .wa-claude__text { width: 100%; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12px; line-height: 1.5; resize: vertical; }
+
+/* Contacts: Send WhatsApp per row, and its dialog. */
+.wa-sendcell { text-align: right; white-space: nowrap; }
+.wa-send { display: flex; flex-direction: column; gap: 10px; }
+.wa-send textarea { width: 100%; font-size: 14px; line-height: 1.5; }

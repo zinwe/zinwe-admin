@@ -3,10 +3,95 @@ import { Modal } from "../../../components/Modal";
 import { useToast } from "../../../components/Toast";
 import { ApiError } from "../../../lib/api";
 import {
+  draftFor, markSent, waLink, type WaMedia, type WaTemplate,
   actOn, addWaContact, addWaFile, deleteWaContact, downloadWaTemplate, getWaContact, patchWaContact, reviewWaFile,
   type WaCampaign, type WaChoice, type WaContact, type WaFileRow, type WaNewContact, type WaStatus, type WaTrack,
 } from "../../../lib/whatsappApi";
-import { Bubble, errText, nameOf, TRACK_LABEL, when, WaPill, WA_STATUS } from "./shared";
+import { Bubble, errText, KIND_LABEL, nameOf, TRACK_LABEL, when, WaPill, WA_STATUS } from "./shared";
+import { Attach } from "./TodayTab";
+
+/**
+ * Send WhatsApp from the contact list: start from any template (filled for this business, the greeting included) or a
+ * blank custom message, edit it, Open in WhatsApp, then Mark as sent. A one-off: it never moves their sequence, except
+ * a first message to someone who hasn't had one yet, which starts it.
+ */
+function SendModal({ c, templates, onClose, onSent }: { c: WaContact; templates: WaTemplate[]; onClose: () => void; onSent: () => void }): ReactElement {
+  const toast = useToast();
+  const [pick, setPick] = useState(0); // 0 = custom message
+  const [text, setText] = useState(`${c.salutation ?? `Hi ${c.greet_as}`}, `);
+  const [by, setBy] = useState("Custom message");
+  const [media, setMedia] = useState<WaMedia | null>(null);
+  const [hints, setHints] = useState({ creative: "", notes: "" });
+  const [busy, setBusy] = useState(false);
+  const [opened, setOpened] = useState(false);
+  const chosen = templates.find((t) => t.id === pick);
+  const kinds = [...new Set(templates.map((t) => t.kind))];
+  const choose = async (id: number) => {
+    setPick(id);
+    setOpened(false);
+    if (!id) {
+      setText(`${c.salutation ?? `Hi ${c.greet_as}`}, `);
+      setBy("Custom message");
+      setMedia(null);
+      setHints({ creative: "", notes: "" });
+      return;
+    }
+    const t = templates.find((x) => x.id === id);
+    setBusy(true);
+    try {
+      const d = await draftFor(c.id, t?.kind ?? "first", id);
+      setText(d.text);
+      setMedia(d.media ?? null);
+      setHints({ creative: d.creative ?? "", notes: d.notes ?? "" });
+      setBy(d.by === "claude" ? `Personalised by Claude from ${d.template}` : `From the template ${d.template}`);
+    } catch (err) {
+      toast(errText(err, "Couldn't draft this message."), "bad");
+    }
+    setBusy(false);
+  };
+  // A first-message template to someone who hasn't had one starts their sequence; anything else is a one-off.
+  const sendKind = chosen?.kind === "first" && c.step === 0 ? "first" : "custom";
+  const sent = async () => {
+    setBusy(true);
+    try {
+      await markSent(c.id, sendKind, text);
+      toast(sendKind === "first" ? "Marked as sent. Their sequence has started." : "Marked as sent.");
+      onSent();
+      onClose();
+    } catch (err) {
+      toast(errText(err, "Couldn't save that."), "bad");
+      setBusy(false);
+    }
+  };
+  return (
+    <Modal title={`Send WhatsApp to ${nameOf(c)}`} subtitle={`${c.firm} · ${c.phone}`} onClose={onClose}
+      footer={<>
+        <button type="button" className="btn" onClick={onClose}>Cancel</button>
+        <a className={"btn wa-open" + (opened ? "" : " dark")} href={waLink(c.phone, text)} target="_blank" rel="noreferrer" onClick={() => setOpened(true)} aria-disabled={!text.trim()}>Open in WhatsApp</a>
+        <button type="button" className={"btn" + (opened ? " dark" : "")} disabled={busy || !text.trim()} onClick={() => void sent()}>Mark as sent</button>
+      </>}>
+      <div className="mk wa-send">
+        <label className="fl">Start from
+          <select className="inp" value={pick} disabled={busy} onChange={(e) => void choose(Number(e.target.value))}>
+            <option value={0}>Custom message</option>
+            {kinds.map((k) => (
+              <optgroup key={k} label={KIND_LABEL[k]}>
+                {templates.filter((t) => t.kind === k).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </optgroup>
+            ))}
+          </select>
+        </label>
+        <span className="wa-by">{busy ? "Drafting…" : by}</span>
+        <textarea className="inp" rows={9} maxLength={2000} aria-label={`Message to ${nameOf(c)}`} value={text} onChange={(e) => setText(e.target.value)} />
+        <span className="k">{text.length} characters · {sendKind === "first" ? "Sending this starts their sequence: the follow-up comes on schedule." : "A one-off: their sequence doesn’t move."}</span>
+        {media ? <Attach media={media} /> : null}
+        {hints.creative && !media ? <p className="k wa-hint"><b>Creative:</b> {hints.creative}</p> : null}
+        {hints.notes ? <details className="wa-hint"><summary className="k">Notes for replies (not sent)</summary><p className="k">{hints.notes}</p></details> : null}
+        <span className="k">Open in WhatsApp fills the chat on the Zinwe WhatsApp Business number. Press Send there, then Mark as sent here.</span>
+      </div>
+    </Modal>
+  );
+}
 
 const RESULT: Record<WaFileRow["result"], string> = { ready: "good", warn: "warn", locked: "", bad: "bad" };
 const COLUMNS = ["Business Name", "Phone", "Segment", "Country", "City", "Opt-in (Y or blank)"];
@@ -342,12 +427,13 @@ const VIEWS: [string, string, (c: WaContact) => boolean][] = [
   ["stop", "Do not message", (c) => c.status === "stop"],
 ];
 
-export function ContactsTab({ contacts, campaigns, reload }: { contacts: WaContact[]; campaigns: WaCampaign[]; reload: () => void }): ReactElement {
+export function ContactsTab({ contacts, campaigns, templates, reload }: { contacts: WaContact[]; campaigns: WaCampaign[]; templates: WaTemplate[]; reload: () => void }): ReactElement {
   const [view, setView] = useState("all");
   const [seg, setSeg] = useState("");
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(0);
   const [adding, setAdding] = useState(false);
+  const [sending, setSending] = useState<WaContact | null>(null);
   const test = VIEWS.find((v) => v[0] === view)?.[2] ?? (() => true);
   const segments = [...new Set(contacts.map((c) => c.segment))].sort();
   const needle = q.trim().toLowerCase();
@@ -371,7 +457,7 @@ export function ContactsTab({ contacts, campaigns, reload }: { contacts: WaConta
         <div className="scroll">
           <table className="tbl">
             <caption className="sr">WhatsApp contacts</caption>
-            <thead><tr><th scope="col">Business</th><th scope="col">Phone</th><th scope="col">Segment</th><th scope="col">Status</th><th scope="col">Campaign</th><th scope="col">Latest</th></tr></thead>
+            <thead><tr><th scope="col">Business</th><th scope="col">Phone</th><th scope="col">Segment</th><th scope="col">Status</th><th scope="col">Campaign</th><th scope="col">Latest</th><th scope="col"><span className="sr">Send</span></th></tr></thead>
             <tbody>
               {rows.map((c) => (
                 <tr key={c.id} className="click" onClick={() => setOpen(c.id)}>
@@ -381,6 +467,11 @@ export function ContactsTab({ contacts, campaigns, reload }: { contacts: WaConta
                   <td>{c.opted_in ? <WaPill s={c.status as WaStatus} /> : <span className="pill" title="Locked until they opt in">Not opted in</span>}</td>
                   <td>{c.campaign_name || <span className="k">None</span>}</td>
                   <td className="k">{c.last ? `${c.last.kind === "theirs" ? "They wrote" : "Sent"} ${when(c.last.at)}` : WA_STATUS[c.status][0]}</td>
+                  <td className="wa-sendcell">
+                    <button type="button" className="btn sm" disabled={!c.opted_in || c.status === "stop"}
+                      title={c.status === "stop" ? "Asked to stop: never message them" : !c.opted_in ? "Not opted in yet: mark them opted in first" : undefined}
+                      onClick={(e) => { e.stopPropagation(); setSending(c); }}>Send WhatsApp</button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -388,6 +479,7 @@ export function ContactsTab({ contacts, campaigns, reload }: { contacts: WaConta
         </div>
         {rows.length ? null : <div className="empty">{contacts.length ? "No contacts match." : "No contacts yet. Use Add contacts to type one in or upload a sheet."}</div>}
       </section>
+      {sending ? <SendModal c={sending} templates={templates} onClose={() => setSending(null)} onSent={reload} /> : null}
       {adding ? <AddContacts campaigns={campaigns} segments={segments} onAdded={reload} onClose={() => setAdding(false)} /> : null}
       {open ? <ContactDrawer id={open} campaigns={campaigns} onClose={() => setOpen(0)} onChanged={reload} /> : null}
     </>

@@ -19,7 +19,7 @@ async function asPng(blob: Blob): Promise<Blob> {
 }
 
 /** The template's picture or video: wa.me links carry text only, so staff paste or attach it in the chat. */
-function Attach({ media }: { media: WaMedia }): ReactElement {
+export function Attach({ media }: { media: WaMedia }): ReactElement {
   const toast = useToast();
   const word = mediaWord(media.kind);
   const download = async () => {

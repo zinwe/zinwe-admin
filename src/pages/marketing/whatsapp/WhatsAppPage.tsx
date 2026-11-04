@@ -43,7 +43,7 @@ export function WhatsAppPage(): ReactElement {
       body = id !== "new" && !campaign
         ? <ErrorState message="That campaign doesn't exist." />
         : <CampaignEditor key={id} campaign={campaign} templates={templates} audiences={audiences} contacts={contacts} onSaved={reload} />;
-    } else if (tab === "contacts") body = <ContactsTab contacts={contacts} campaigns={campaigns} reload={reload} />;
+    } else if (tab === "contacts") body = <ContactsTab contacts={contacts} campaigns={campaigns} templates={templates} reload={reload} />;
     else if (tab === "campaigns") body = <CampaignList campaigns={campaigns} />;
     else if (tab === "templates") body = <TemplatesTab templates={templates} reload={reload} />;
     else if (tab === "analytics" && analytics) body = <AnalyticsTab data={analytics} />;
