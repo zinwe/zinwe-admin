@@ -48,6 +48,8 @@ export interface WaContact {
   opt_in_note: string;
   /** How drafts address them: their first name when it clearly is one, else "<Business> team". */
   greet_as: string;
+  /** How a message opens: "Hi Rohit", or "Hello Webgross team" without a real first name. */
+  salutation?: string;
   /** The business name without SEO words, legal suffixes or fancy letters. */
   short_name: string;
   messages?: WaMessage[];
@@ -91,11 +93,27 @@ export interface WaMedia {
   url: string;
 }
 
+/** The outreach structure (wa_structure.py): same parts, same order, every template; only the words change.
+ * creative and notes are never sent. */
+export interface WaParts {
+  creative?: string;
+  intro?: string;
+  problem?: string;
+  solution?: string;
+  reward?: string;
+  cta?: string;
+  details?: string;
+  notes?: string;
+}
+
 export interface WaTemplate {
   id?: number;
   name: string;
   kind: WaKind;
+  /** Composed from `parts` by the backend when the template is structured. */
   text: string;
+  /** Empty = a free-text template. */
+  parts?: WaParts;
   track?: WaTrack;
   day?: number;
   media?: WaMedia | null;
@@ -163,7 +181,7 @@ export const getWaContact = (id: number) => request<WaContact>(`${BASE}/contacts
 export const patchWaContact = (id: number, patch: Partial<Pick<WaContact, "campaign" | "first_name" | "firm" | "segment" | "city" | "info" | "track">>) =>
   request<WaContact>(`${BASE}/contacts/${id}/`, { method: "PATCH", body: JSON.stringify(patch) });
 export const deleteWaContact = (id: number) => request<null>(`${BASE}/contacts/${id}/`, { method: "DELETE" });
-export const draftFor = (id: number, kind: WaKind) => request<{ text: string; template: string; by: "claude" | "template"; media: WaMedia | null }>(`${BASE}/contacts/${id}/draft/`, post({ kind }));
+export const draftFor = (id: number, kind: WaKind) => request<{ text: string; template: string; by: "claude" | "template"; media: WaMedia | null; creative?: string; notes?: string }>(`${BASE}/contacts/${id}/draft/`, post({ kind }));
 export const markSent = (id: number, kind: WaSendKind, text: string) => request<WaContact>(`${BASE}/contacts/${id}/sent/`, post({ kind, text }));
 export const logReply = (id: number, text: string) => request<WaContact>(`${BASE}/contacts/${id}/reply/`, post({ text }));
 export const actOn = (id: number, action: "interested" | "signed" | "notnow" | "stop" | "pause" | "resume" | "optin", note = "") => request<WaContact>(`${BASE}/contacts/${id}/act/`, post({ action, note }));

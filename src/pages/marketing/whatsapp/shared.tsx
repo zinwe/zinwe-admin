@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactElement, type ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 import { ApiError } from "../../../lib/api";
-import { fetchWaMedia, type WaContact, type WaKind, type WaMedia, type WaStatus, type WaTrack } from "../../../lib/whatsappApi";
+import { fetchWaMedia, type WaContact, type WaKind, type WaMedia, type WaParts, type WaStatus, type WaTrack } from "../../../lib/whatsappApi";
 
 export const WA_STATUS: Record<WaStatus, [string, string]> = {
   ready: ["Ready", ""], messaged: ["Messaged", "warn"], replied: ["Replied", "warn"], interested: ["Interested", "good"],
@@ -12,10 +12,30 @@ export const KIND_LABEL: Record<WaKind, string> = {
   interested: "Reply: interested", question: "Reply: question", notnow: "Reply: not now", nurture: "After YES",
 };
 export const TRACK_LABEL: Record<WaTrack, string> = { "": "Every YES", data: "Data safety", day: "Team's day", chat: "Team chat" };
-/** Fills the placeholders with a sample business, for previews. */
+/** Fills the placeholders with a sample business, for previews. `first` = "" shows the no-name greeting:
+ * "Hello Gupta Exim team" (as wa_names.py does when we don't know a real first name). */
 export const sampleText = (t: string, firm = "Gupta Exim", first = "Rakesh"): string =>
-  t.replace(/\{\{FirstName\}\}/g, first).replace(/\{\{(Firm|Business)\}\}/g, firm).replace(/\{\{City\}\}/g, "Noida")
+  t.replace(/^\s*(Hi|Hello)\s+\{\{FirstName\}\}/, "{{Greeting}}")
+    .replace(/\{\{Greeting\}\}/g, first ? `Hi ${first}` : `Hello ${firm} team`)
+    .replace(/\{\{FirstName\}\}/g, first || `${firm} team`).replace(/\{\{(Firm|Business)\}\}/g, firm).replace(/\{\{City\}\}/g, "Noida")
     .replace(/\{\{HowWeKnow\}\}/g, "I found you on Google Maps, where you're rated 4.8.");
+
+/** The outreach message structure, in order (wa_structure.py). `sent: false` parts stay out of the message. */
+export const PARTS: { key: keyof WaParts; label: string; hint: string; required: boolean; sent: boolean; rows: number; example: string }[] = [
+  { key: "creative", label: "Creative", hint: "A picture or video to send with it, or what to make. Text only for people who haven’t replied yet.", required: false, sent: false, rows: 2, example: "After they reply: a 10-second clip of the alert arriving" },
+  { key: "intro", label: "Intro", hint: "After the greeting: who you are and how you know them. The greeting is added for you: “Hi Rohit,” or “Hello Webgross team,” when we don’t know a real name.", required: true, sent: true, rows: 2, example: "Vishal from Zinwe here. {{HowWeKnow}}" },
+  { key: "problem", label: "Value: the problem", hint: "One real moment they’ll recognise. One line.", required: true, sent: true, rows: 2, example: "Client files often go to a pen drive “just for this project”." },
+  { key: "solution", label: "Value: the solution", hint: "The one Zinwe feature that answers it. One line.", required: true, sent: true, rows: 2, example: "Zinwe alerts you and can set USB to read-only." },
+  { key: "reward", label: "Reward", hint: "The cherry-on-top line.", required: true, sent: true, rows: 2, example: "Cherry on top: manage team activity, chat and share tasks without switching apps. Free forever." },
+  { key: "cta", label: "Call to action", hint: "One easy ask they can answer in a word, and how to stop.", required: true, sent: true, rows: 2, example: "Useful for {{Business}}? Reply STOP to opt out." },
+  { key: "details", label: "Other details", hint: "Optional last line: a link or a P.S. Never in a first message to a stranger.", required: false, sent: true, rows: 2, example: "" },
+  { key: "notes", label: "Notes for replies", hint: "Never sent. Context for whoever answers next, like Claude in the browser: the value point, what to send after a YES, what not to promise.", required: false, sent: false, rows: 3, example: "Value point V2. If YES: send the YES reply. Use the approved answers." },
+];
+
+/** The text a structured template sends, exactly as the backend composes it. */
+export const composeParts = (p: WaParts): string =>
+  [`{{Greeting}}, ${(p.intro ?? "").trim()}`, ...(["problem", "solution", "reward", "cta", "details"] as const).map((k) => (p[k] ?? "").trim()).filter(Boolean)].join("\n\n");
+export const isStructured = (p?: WaParts | null): boolean => !!p && Object.values(p).some((v) => (v ?? "").trim());
 export const WaPill = ({ s }: { s: WaStatus }): ReactElement => <span className={"pill " + WA_STATUS[s][1]}>{WA_STATUS[s][0]}</span>;
 export const errText = (err: unknown, fallback: string): string => (err instanceof ApiError ? err.message : fallback);
 /** Who the contact is, as drafts greet them (see wa_names.py), so screens and messages agree. */

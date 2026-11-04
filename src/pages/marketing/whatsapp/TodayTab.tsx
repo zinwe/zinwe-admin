@@ -89,10 +89,11 @@ function Draft({ c, kind, send, onDone }: { c: WaContact; kind: WaKind; send: Wa
   const [busy, setBusy] = useState(true);
   const [opened, setOpened] = useState(false);
   const [media, setMedia] = useState<WaMedia | null>(null);
+  const [hints, setHints] = useState<{ creative: string; notes: string }>({ creative: "", notes: "" });
   const load = () => {
     setBusy(true);
     draftFor(c.id, kind)
-      .then((d) => { setText(d.text); setMedia(d.media ?? null); setBy(d.by === "claude" ? `Personalised by Claude from ${d.template}` : `From the template ${d.template}`); })
+      .then((d) => { setText(d.text); setMedia(d.media ?? null); setHints({ creative: d.creative ?? "", notes: d.notes ?? "" }); setBy(d.by === "claude" ? `Personalised by Claude from ${d.template}` : `From the template ${d.template}`); })
       .catch((err) => toast(errText(err, "Couldn't draft this message."), "bad"))
       .finally(() => setBusy(false));
   };
@@ -113,6 +114,13 @@ function Draft({ c, kind, send, onDone }: { c: WaContact; kind: WaKind; send: Wa
       <span className="wa-by">{busy && !text ? "Drafting…" : by}</span>
       <textarea className="inp" rows={7} aria-label={`Message to ${nameOf(c)}`} value={text} onChange={(e) => setText(e.target.value)} />
       {media ? <Attach media={media} /> : null}
+      {hints.creative && !media ? <p className="k wa-hint"><b>Creative:</b> {hints.creative}</p> : null}
+      {hints.notes ? (
+        <details className="wa-hint">
+          <summary className="k">Notes for replies (not sent)</summary>
+          <p className="k">{hints.notes}</p>
+        </details>
+      ) : null}
       <div className="fr">
         <a className="btn sm wa-open" href={waLink(c.phone, text)} target="_blank" rel="noreferrer" onClick={() => setOpened(true)} aria-disabled={!text}>Open in WhatsApp</a>
         <button type="button" className={"btn sm" + (opened ? " dark" : "")} disabled={busy || !text.trim()} onClick={() => void sent()}>Mark as sent</button>

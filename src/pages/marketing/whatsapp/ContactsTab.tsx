@@ -259,7 +259,7 @@ function FirstName({ c, run }: { c: WaContact; run: (work: () => Promise<WaConta
       <label className="fl">First name <span className="k">Leave empty if you don’t know their name</span>
         <input className="inp" maxLength={80} value={value} onChange={(e) => setValue(e.target.value)} onBlur={save} onKeyDown={(e) => { if (e.key === "Enter") save(); }} />
       </label>
-      <span className="k">Messages open with <b>Hi {c.greet_as},</b>{c.first_name && !c.greet_as.endsWith(" team") ? "" : c.first_name ? " because this doesn’t look like a person’s name." : ""}</span>
+      <span className="k">Messages open with <b>{c.salutation ?? `Hi ${c.greet_as}`},</b>{c.first_name && !c.greet_as.endsWith(" team") ? "" : c.first_name ? " because this doesn’t look like a person’s name." : ""}</span>
     </div>
   );
 }
@@ -375,7 +375,7 @@ export function ContactsTab({ contacts, campaigns, reload }: { contacts: WaConta
             <tbody>
               {rows.map((c) => (
                 <tr key={c.id} className="click" onClick={() => setOpen(c.id)}>
-                  <th scope="row"><button type="button" className="cobtn" onClick={(e) => { e.stopPropagation(); setOpen(c.id); }}>{c.short_name || c.firm}</button><span className="k" style={{ display: "block" }}>Hi {c.greet_as} · {c.city}</span></th>
+                  <th scope="row"><button type="button" className="cobtn" onClick={(e) => { e.stopPropagation(); setOpen(c.id); }}>{c.short_name || c.firm}</button><span className="k" style={{ display: "block" }}>{c.salutation ?? `Hi ${c.greet_as}`} · {c.city}</span></th>
                   <td className="num">{c.phone}</td>
                   <td>{c.segment}</td>
                   <td>{c.opted_in ? <WaPill s={c.status as WaStatus} /> : <span className="pill" title="Locked until they opt in">Not opted in</span>}</td>

@@ -60,3 +60,19 @@
 .wa-check input { margin-top: 3px; width: 16px; height: 16px; accent-color: var(--accent); }
 .wa-check .k { display: block; }
 @media (max-width: 640px) { .wa-addone__grid { grid-template-columns: 1fr; } }
+
+/* Template editor: the outreach structure, one card per part, in order. */
+.wa-tform { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 12px; }
+.mk-imp .seg { align-self: flex-start; }
+.wa-parts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; counter-reset: part; }
+.wa-part { counter-increment: part; display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; }
+.wa-part.is-quiet { background: var(--surface-2); }
+.wa-part.has-err { border-color: var(--bad); }
+.wa-part__head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.wa-part__head b::before { content: counter(part) ". "; color: var(--accent); }
+.wa-part .inp { width: 100%; font-size: 14px; }
+.wa-previews { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.wa-previews > div { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.wa-hint { margin: 0; }
+.wa-hint summary { cursor: pointer; }
+@media (max-width: 720px) { .wa-tform, .wa-previews { grid-template-columns: 1fr; } }
