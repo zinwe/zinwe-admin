@@ -591,3 +591,27 @@
   font-weight: 600;
   font-size: 13px;
 }
+
+/* F-12 (v1.3.3): discount % with the price it gives, and the plan's price band. */
+.zp-result {
+  font-size: 18px;
+  line-height: 38px;
+  color: var(--ink);
+}
+
+.zp-band {
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.zp-band legend {
+  padding: 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+}

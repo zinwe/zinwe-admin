@@ -12,6 +12,7 @@ import {
   type PlanPricing,
   type PricingCurrency,
   type PricingOverview,
+  type PricingPatch,
   type RegionPriceInput,
 } from "../lib/api";
 import { useLoad } from "../lib/useLoad";
@@ -74,9 +75,12 @@ interface Fields {
   usdM: string;
   usdY: string;
   usdYAuto: boolean;
+  /** F-12 price band (India monthly, before GST): the final price must stay inside it. Empty = no limit. */
+  bandMin: string;
+  bandMax: string;
 }
 
-type FieldKey = "inrM" | "inrY" | "usdM" | "usdY" | "was";
+type FieldKey = "inrM" | "inrY" | "usdM" | "usdY" | "was" | "bandMin" | "bandMax";
 
 const FIELD_LABEL: Record<FieldKey, string> = {
   inrM: "India monthly",
@@ -84,8 +88,40 @@ const FIELD_LABEL: Record<FieldKey, string> = {
   usdM: "Abroad monthly",
   usdY: "Abroad yearly",
   was: "Was price",
+  bandMin: "Lowest price",
+  bandMax: "Highest price",
 };
-const FIELD_KEYS: FieldKey[] = ["inrM", "inrY", "usdM", "usdY", "was"];
+const FIELD_KEYS: FieldKey[] = ["inrM", "inrY", "usdM", "usdY", "was", "bandMin", "bandMax"];
+
+/** The server serves price bands (v1.3.3). An older one doesn't: the band fields stay hidden and aren't sent. */
+const hasBand = (p: PlanPricing) => p.band_min_inr !== undefined || p.band_max_inr !== undefined;
+
+/** Whole-percent discounts (0–90) off `list` that keep the price inside the band. */
+function allowedPcts(list: number, min: number, max: number): number[] {
+  if (!(list > 0)) return [];
+  const out: number[] = [];
+  for (let pct = 0; pct <= 90; pct++) {
+    const price = discounted(list, pct);
+    if ((!(min > 0) || price >= min) && (!(max > 0) || price <= max)) out.push(pct);
+  }
+  return out;
+}
+
+/** [26, 27, …, 33] -> "26%–33%"; gaps are listed; [] -> "". */
+function pctRange(list: number[]): string {
+  if (!list.length) return "";
+  const contiguous = list.every((v, i) => i === 0 || v === list[i - 1] + 1);
+  if (list.length === 1) return `${list[0]}%`;
+  return contiguous ? `${list[0]}%–${list[list.length - 1]}%` : list.map((v) => `${v}%`).join(", ");
+}
+
+/** The discount the board's was + monthly price stand for (0 without a was price). */
+function pctOf(f: Fields): number {
+  const w = num(f.was);
+  const m = num(f.inrM);
+  if (!f.was.trim() || !(w > 0) || !(m > 0)) return 0;
+  return wasSplit(w, m).pct;
+}
 
 function fieldsOf(p: PlanPricing): Fields {
   const inr = p.regions.INR;
@@ -98,6 +134,8 @@ function fieldsOf(p: PlanPricing): Fields {
     usdM: Number(usd.monthly.list) > 0 ? strip(usd.monthly.price) : "",
     usdY: Number(usd.monthly.list) > 0 ? strip(usd.yearly.price) : "",
     usdYAuto: !usd.yearly.custom,
+    bandMin: p.band_min_inr ? strip(p.band_min_inr) : "",
+    bandMax: p.band_max_inr ? strip(p.band_max_inr) : "",
   };
 }
 
@@ -116,7 +154,7 @@ function shown(f: Fields, k: FieldKey): string {
 
 function fmtField(k: FieldKey, v: string): string {
   const t = v.trim();
-  if (k === "was") return t ? money(num(t), "INR") : "none";
+  if (k === "was" || k === "bandMin" || k === "bandMax") return t ? money(num(t), "INR") : "none";
   if (!t) return "none";
   return k === "usdM" || k === "usdY" ? money(num(t), "USD") : money(num(t), "INR");
 }
@@ -141,6 +179,15 @@ function planError(f: Fields, usdSold: boolean): string {
   const y = num(shown(f, "inrY"));
   if (!(m > 0)) return "Enter the monthly price in rupees.";
   if (m % 1) return "Use whole rupees for the monthly price.";
+  const bMin = f.bandMin.trim() ? num(f.bandMin) : Number.NaN;
+  const bMax = f.bandMax.trim() ? num(f.bandMax) : Number.NaN;
+  if (f.bandMin.trim() && !(bMin > 0 && bMin % 1 === 0)) return "Price band: the lowest price is whole rupees, or empty.";
+  if (f.bandMax.trim() && !(bMax > 0 && bMax % 1 === 0)) return "Price band: the highest price is whole rupees, or empty.";
+  if (bMin > 0 && bMax > 0 && bMin > bMax) return "Price band: the lowest price must not be above the highest.";
+  if ((bMin > 0 && m < bMin) || (bMax > 0 && m > bMax)) {
+    const band = bMin > 0 && bMax > 0 ? `${money(bMin, "INR")}–${money(bMax, "INR")}` : bMin > 0 ? `${money(bMin, "INR")} or more` : `${money(bMax, "INR")} or less`;
+    return `Puts the price at ${money(m, "INR")}, outside ${band}. Change the discount or the band.`;
+  }
   if (!(y > 0)) return "Enter the yearly price in rupees.";
   if (y > m * 12 + 0.001) return `A year can’t cost more than 12 months (${money(m * 12, "INR")}).`;
   if (y < m * 6) return `A year can’t cost less than 6 months (${money(m * 6, "INR")}). Check for a missing digit.`;
@@ -165,10 +212,14 @@ function planError(f: Fields, usdSold: boolean): string {
   return "";
 }
 
-/** The PATCH body for what changed (same endpoint and shape as before v1.3). */
-function bodyFor(p: PlanPricing, saved: Fields, draft: Fields): Partial<Record<PricingCurrency, RegionPriceInput>> {
-  const body: Partial<Record<PricingCurrency, RegionPriceInput>> = {};
+/** The PATCH body for what changed (same endpoint and shape as before v1.3, plus the price band since v1.3.3). */
+function bodyFor(p: PlanPricing, saved: Fields, draft: Fields): PricingPatch {
+  const body: PricingPatch = {};
   const changed = (k: FieldKey) => shown(draft, k) !== shown(saved, k);
+  if (hasBand(p) && (changed("bandMin") || changed("bandMax"))) {
+    body.band_min_inr = draft.bandMin.trim() ? String(num(draft.bandMin)) : null;
+    body.band_max_inr = draft.bandMax.trim() ? String(num(draft.bandMax)) : null;
+  }
   if (changed("inrM") || changed("inrY") || changed("was")) {
     const m = num(draft.inrM);
     const y = num(shown(draft, "inrY"));
@@ -200,13 +251,14 @@ function bodyFor(p: PlanPricing, saved: Fields, draft: Fields): Partial<Record<P
 }
 
 /** The body that puts a plan back to how it was (for Undo). */
-function restoreBody(p: PlanPricing): Partial<Record<PricingCurrency, RegionPriceInput>> {
+function restoreBody(p: PlanPricing): PricingPatch {
   const r = (c: PricingCurrency): RegionPriceInput => ({
     list_monthly: p.regions[c].monthly.list,
     discount_percent: p.regions[c].monthly.discount_percent,
     yearly_price: p.regions[c].yearly.custom ? p.regions[c].yearly.price : null,
   });
-  return { INR: r("INR"), USD: r("USD") };
+  const band = hasBand(p) ? { band_min_inr: p.band_min_inr ?? null, band_max_inr: p.band_max_inr ?? null } : {};
+  return { ...band, INR: r("INR"), USD: r("USD") };
 }
 
 interface Change {
@@ -287,6 +339,17 @@ export function PricingPage(): ReactElement {
       return { ...cur, [code]: next };
     });
 
+  /** Typing a discount keeps the list price ("was", or today's price when there is none) and works out the price. */
+  const setDiscount = (code: string, pct: number) =>
+    setDraft((cur) => {
+      const f = cur[code];
+      const w = num(f.was);
+      const list = f.was.trim() && w > 0 ? w : num(f.inrM);
+      if (!(list > 0)) return cur;
+      const next: Fields = pct > 0 ? { ...f, was: String(list), inrM: String(discounted(list, pct)) } : { ...f, was: "", inrM: String(list) };
+      return { ...cur, [code]: next };
+    });
+
   const doSave = async () => {
     if (!data) return;
     setSaving(true);
@@ -296,7 +359,7 @@ export function PricingPage(): ReactElement {
     try {
       for (const p of dirtyPlans) {
         const body = bodyFor(p, saved[p.code], draft[p.code]);
-        if (!body.INR && !body.USD) continue;
+        if (!body.INR && !body.USD && body.band_min_inr === undefined) continue;
         const next = await updatePricing(p.code, body);
         before.push(p);
         after.set(p.code, next);
@@ -430,6 +493,7 @@ export function PricingPage(): ReactElement {
                     error={errors[p.code] ?? ""}
                     gstRate={gstRate}
                     onField={(k, v) => setF(p.code, k, v)}
+                    onDiscount={(pct) => setDiscount(p.code, pct)}
                     onRecommend={() => void makeRecommended(p)}
                     recBusy={recBusy === p.code}
                   />
@@ -560,6 +624,7 @@ function PlanCard({
   error: err,
   gstRate,
   onField,
+  onDiscount,
   onRecommend,
   recBusy,
 }: {
@@ -569,6 +634,7 @@ function PlanCard({
   error: string;
   gstRate: number;
   onField: (k: FieldKey, v: string) => void;
+  onDiscount: (pct: number) => void;
   onRecommend: () => void;
   recBusy: boolean;
 }): ReactElement {
@@ -590,6 +656,16 @@ function PlanCard({
     const dl = delta(a, b);
     return dl !== null && Math.abs(dl) > 30 ? "inp num warn" : "inp num chg";
   };
+  // Price band: allowed discounts from the server while list price and band are as saved, else worked out here.
+  const listNow = d.was.trim() && wasP > 0 ? wasP : m;
+  const listSaved = saved.was.trim() ? num(saved.was) : num(saved.inrM);
+  const bandSame = shown(d, "bandMin") === shown(saved, "bandMin") && shown(d, "bandMax") === shown(saved, "bandMax");
+  const bMin = num(d.bandMin);
+  const bMax = num(d.bandMax);
+  const anyBand = bMin > 0 || bMax > 0;
+  const allowed =
+    bandSame && listNow === listSaved && Array.isArray(p.allowed_discounts) ? p.allowed_discounts : allowedPcts(listNow, bMin, bMax);
+  const pctNow = pctOf(d);
   const warns = (["inrM", "inrY", "usdM", "usdY", "was"] as FieldKey[])
     .map((k) => {
       const dl = delta(shown(saved, k), shown(d, k));
@@ -751,6 +827,61 @@ function PlanCard({
               ? `Plans page shows ${money(wasP, "INR")} crossed out next to ${money(m, "INR")} a month. Empty = no strikethrough.`
               : "No strikethrough on the Plans page. Type a was price to show one."}
           </span>
+          <div className="zp-grid2 zp-block zp-block--tight">
+            <DiscountField
+              plan={p.name}
+              pct={pctNow}
+              list={listNow}
+              bad={anyBand && !allowed.includes(pctNow)}
+              changed={pctNow !== pctOf(saved)}
+              onPct={onDiscount}
+            />
+            <div className="zp-fl" aria-live="polite">
+              Price after discount
+              <b className="num zp-result">{m > 0 ? `${money(m, "INR")} a month` : "—"}</b>
+              <span className="k">
+                {anyBand
+                  ? allowed.length
+                    ? `Allowed: ${pctRange(allowed)}`
+                    : "No whole-percent discount keeps it in the band."
+                  : "No price band: any discount."}
+              </span>
+            </div>
+          </div>
+          {hasBand(p) ? (
+            <fieldset className="zp-band">
+              <legend>Price band · India monthly, before GST</legend>
+              <div className="zp-grid2">
+                <label className="zp-fl">
+                  Lowest price
+                  <span className="zp-pre">
+                    <b aria-hidden="true">₹</b>
+                    <input
+                      className={cls("bandMin", errHas("Price band") || errHas("outside"))}
+                      inputMode="numeric"
+                      placeholder="no floor"
+                      value={d.bandMin}
+                      onChange={(e) => onField("bandMin", e.target.value)}
+                    />
+                  </span>
+                </label>
+                <label className="zp-fl">
+                  Highest price
+                  <span className="zp-pre">
+                    <b aria-hidden="true">₹</b>
+                    <input
+                      className={cls("bandMax", errHas("Price band") || errHas("outside"))}
+                      inputMode="numeric"
+                      placeholder="no ceiling"
+                      value={d.bandMax}
+                      onChange={(e) => onField("bandMax", e.target.value)}
+                    />
+                  </span>
+                </label>
+              </div>
+              <span className="k">Any discount is fine as long as the price stays in this band. Empty = no limit.</span>
+            </fieldset>
+          ) : null}
           {warns.length && !err ? <p className="zp-warnbox">{warns.join(" ")}</p> : null}
           {err ? (
             <p role="alert" className="zp-err">
@@ -760,6 +891,56 @@ function PlanCard({
         </div>
       )}
     </article>
+  );
+}
+
+/** Discount % off the list price, typed as a whole number; the price follows as you type. */
+function DiscountField({
+  plan,
+  pct,
+  list,
+  bad,
+  changed,
+  onPct,
+}: {
+  plan: string;
+  pct: number;
+  list: number;
+  bad: boolean;
+  changed: boolean;
+  onPct: (pct: number) => void;
+}): ReactElement {
+  const [text, setText] = useState(String(pct));
+  const [focused, setFocused] = useState(false);
+  // Follow the price fields while not typing here (a typed was price or monthly price changes the discount).
+  useEffect(() => {
+    if (!focused) setText(String(pct));
+  }, [pct, focused]);
+  return (
+    <label className="zp-fl">
+      Discount · India monthly
+      <span className="zp-pre zp-pre--pct">
+        <input
+          className={"inp num" + (bad ? " bad" : changed ? " chg" : "")}
+          inputMode="numeric"
+          aria-label={`${plan} discount in percent`}
+          value={text}
+          disabled={!(list > 0)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => {
+            setFocused(false);
+            setText(String(pct));
+          }}
+          onChange={(e) => {
+            const v = e.target.value.replace(/[^\d]/g, "").slice(0, 2);
+            setText(v);
+            onPct(v ? Math.min(90, Number(v)) : 0);
+          }}
+        />
+        <b aria-hidden="true">%</b>
+      </span>
+      <span className="k">{list > 0 ? `off ${money(list, "INR")} list price` : "Set the monthly price first"}</span>
+    </label>
   );
 }
 

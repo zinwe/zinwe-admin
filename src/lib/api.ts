@@ -573,6 +573,14 @@ export interface PlanPricing {
   /** Customers paying for this plan now. */
   subscribers: number;
   regions: Record<PricingCurrency, RegionPricing>;
+  /**
+   * F-12 price band (v1.3.3): the India monthly price after discount must stay within it (rupees, before GST).
+   * null = no limit; undefined = an older server without bands.
+   */
+  band_min_inr?: string | null;
+  band_max_inr?: string | null;
+  /** Whole-number discount % that keep the saved list price inside the band. */
+  allowed_discounts?: number[];
 }
 
 export interface PricingOverview {
@@ -590,10 +598,15 @@ export interface RegionPriceInput {
 
 export const getPricing = () => request<PricingOverview>("/api/admin/pricing/");
 
-export const updatePricing = (
-  code: string,
-  body: Partial<Record<PricingCurrency, RegionPriceInput>> & { is_recommended?: boolean },
-) => request<PlanPricing>(`/api/admin/pricing/${encodeURIComponent(code)}/`, { method: "PATCH", body: JSON.stringify(body) });
+/** PATCH body: changed regions, the price band (null clears a side) and the recommended flag. */
+export type PricingPatch = Partial<Record<PricingCurrency, RegionPriceInput>> & {
+  is_recommended?: boolean;
+  band_min_inr?: string | null;
+  band_max_inr?: string | null;
+};
+
+/** A discount that takes the price out of its band answers 400 {"discount_percent": ["Puts the price at ₹X, outside ₹A–₹B."]}. */
+export const updatePricing = (code: string, body: PricingPatch) => request<PlanPricing>(`/api/admin/pricing/${encodeURIComponent(code)}/`, { method: "PATCH", body: JSON.stringify(body) });
 
 // --- Announcements (notification bars on the customer dashboard and the website) -------------
 
