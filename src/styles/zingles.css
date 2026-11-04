@@ -77,6 +77,37 @@
   }
 }
 
+/* The Windows app's title bar: white, the logo 22 px high at the left, minimise and close at the right. */
+.zg-app {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 0 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #ffffff;
+  color: #141210;
+  overflow: hidden;
+}
+
+.zg-app__logo {
+  display: block;
+  height: 22px;
+  width: auto;
+  flex: none;
+}
+
+.zg-app__ctl {
+  margin-left: auto;
+  display: flex;
+  align-self: stretch;
+}
+
+.zg-app__ctl svg {
+  box-sizing: content-box;
+  padding: 13px 18px;
+}
+
 /* Editor */
 .zg-dialog {
   width: min(720px, calc(100vw - 32px));
@@ -139,6 +170,28 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 8px;
+}
+
+.zg-where {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+}
+
+.zg-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.zg-check input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--ink);
 }
 
 .zg-note {

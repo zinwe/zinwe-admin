@@ -6,13 +6,16 @@ import {
   createZingle,
   deleteZingle,
   getZingles,
+  placesOf,
   stillUrl,
   updateZingle,
+  whereLabel,
+  whereOf,
   zingleState,
   type Zingle,
   type ZingleInput,
-  type ZinglePlaces,
   type ZingleState,
+  type ZingleWhere,
 } from "../lib/zinglesApi";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { Modal } from "../components/Modal";
@@ -27,12 +30,14 @@ const NAV_LOGO_H = 28;
 const LOGO_ASPECT = 837 / 206;
 const MAX_ANIMATED = 2 * 1024 * 1024;
 
-const PLACES: [ZinglePlaces, string, string][] = [
-  ["both", "Website + dashboard", "zinwe.io, the sign-in page and the customer dashboard"],
+/** The Windows app's title bar shows the logo 22 px high. */
+const APP_LOGO_H = 22;
+
+const WHERE: [keyof ZingleWhere, string, string][] = [
   ["website", "Website", "zinwe.io and the sign-in page"],
-  ["dashboard", "Dashboard", "the customer dashboard only"],
+  ["dashboard", "Dashboard", "the customer dashboard"],
+  ["app", "Windows app", "the Windows app’s title bar"],
 ];
-const PLACE_LABEL = Object.fromEntries(PLACES.map(([k, l]) => [k, l])) as Record<ZinglePlaces, string>;
 
 const STATE: Record<ZingleState, [string, string]> = {
   live: ["Live", "accent"],
@@ -114,6 +119,28 @@ function NavPreview({ src, alt, compact }: { src: string; alt: string; compact?:
   );
 }
 
+/** The Windows app's title bar: white, the Zingle 22 px high at the left, minimise and close at the right. */
+function AppPreview({ src, alt }: { src: string; alt: string }): ReactElement {
+  const width = Math.round(APP_LOGO_H * LOGO_ASPECT);
+  return (
+    <div className="zg-app" aria-label="Preview in the Windows app’s title bar" role="img">
+      {src ? (
+        <img className="zg-app__logo" src={src} alt={alt} height={APP_LOGO_H} style={{ maxWidth: width + 32 }} />
+      ) : (
+        <img className="zg-app__logo" src="/brand/zinwe-logo-96.png" alt="Zinwe" height={APP_LOGO_H} width={width} />
+      )}
+      <span className="zg-app__ctl" aria-hidden="true">
+        <svg viewBox="0 0 10 10" width="10" height="10">
+          <path d="M0 5.5h10" stroke="currentColor" strokeWidth="1" />
+        </svg>
+        <svg viewBox="0 0 10 10" width="10" height="10">
+          <path d="M0.5 0.5l9 9M9.5 0.5l-9 9" stroke="currentColor" strokeWidth="1" />
+        </svg>
+      </span>
+    </div>
+  );
+}
+
 /* ---------- editor ---------- */
 
 type Draft = Omit<ZingleInput, "animated" | "still"> & { id: number | "new"; animatedUrl: string; stillUrl: string };
@@ -130,6 +157,7 @@ function blankDraft(): Draft {
     starts_at: start.toISOString(),
     ends_at: end.toISOString(),
     places: "both",
+    show_app: false,
     is_active: true,
     animatedUrl: "",
     stillUrl: "",
@@ -144,6 +172,7 @@ function draftOf(z: Zingle): Draft {
     starts_at: z.starts_at,
     ends_at: z.ends_at,
     places: z.places,
+    show_app: Boolean(z.show_app),
     is_active: z.is_active,
     animatedUrl: animatedUrl(z),
     stillUrl: stillUrl(z),
@@ -189,6 +218,12 @@ function Editor({ draft, others, onClose, onSaved }: { draft: Draft; others: Zin
 
   const animatedSrc = animatedPick || d.animatedUrl;
   const stillSrc = stillPick || d.stillUrl;
+  const where = whereOf(d.places, d.show_app);
+  const setWhere = (k: keyof ZingleWhere, on: boolean) => {
+    const next = { ...where, [k]: on };
+    patch({ places: placesOf(next), show_app: next.app });
+  };
+  const whereText = WHERE.filter(([k]) => where[k]).map(([, , t]) => t);
   const endBad = Boolean(d.ends_at && new Date(d.ends_at).getTime() <= new Date(d.starts_at).getTime());
   const missing = !d.name.trim()
     ? "Give it a name."
@@ -198,16 +233,19 @@ function Editor({ draft, others, onClose, onSaved }: { draft: Draft; others: Zin
         ? "Add the still PNG."
         : !d.alt.trim()
           ? "Write the alt text."
-          : !d.ends_at
-            ? "Pick when it ends."
-            : endBad
-              ? "The end must be after the start."
-              : "";
+          : !where.website && !where.dashboard && !where.app
+            ? "Choose where it shows."
+            : !d.ends_at
+              ? "Pick when it ends."
+              : endBad
+                ? "The end must be after the start."
+                : "";
 
   // Two Zingles at once on the same place: the one that starts later shows.
   const clash = others.find((z) => {
     if (z.id === d.id || !z.is_active || !d.is_active) return false;
-    const placesMeet = z.places === "both" || d.places === "both" || z.places === d.places;
+    const zw = whereOf(z.places, Boolean(z.show_app));
+    const placesMeet = (zw.website && where.website) || (zw.dashboard && where.dashboard) || (zw.app && where.app);
     const zEnd = z.ends_at ? new Date(z.ends_at).getTime() : Infinity;
     const dEnd = d.ends_at ? new Date(d.ends_at).getTime() : Infinity;
     return placesMeet && new Date(z.starts_at).getTime() < dEnd && new Date(d.starts_at).getTime() < zEnd;
@@ -222,6 +260,7 @@ function Editor({ draft, others, onClose, onSaved }: { draft: Draft; others: Zin
       starts_at: d.starts_at,
       ends_at: d.ends_at,
       places: d.places,
+      show_app: d.show_app,
       is_active: d.is_active,
       animated,
       still,
@@ -317,14 +356,21 @@ function Editor({ draft, others, onClose, onSaved }: { draft: Draft; others: Zin
 
         <fieldset className="zg-set">
           <legend className="lab">Where it shows</legend>
-          <div className="seg" role="group" aria-label="Where it shows">
-            {PLACES.map(([k, l]) => (
-              <button key={k} type="button" className={d.places === k ? "on" : ""} aria-pressed={d.places === k} onClick={() => patch({ places: k })}>
-                {l}
-              </button>
+          <div className="zg-where">
+            {WHERE.map(([k, l]) => (
+              <label key={k} className="zg-check">
+                <input type="checkbox" checked={where[k]} onChange={(e) => setWhere(k, e.target.checked)} />
+                {k === "website" ? (
+                  <span>
+                    {l} <span className="k">incl. sign-in</span>
+                  </span>
+                ) : (
+                  <span>{l}</span>
+                )}
+              </label>
             ))}
           </div>
-          <span className="k">On {PLACES.find(([k]) => k === d.places)?.[2]}.</span>
+          <span className="k">{whereText.length ? `On ${whereText.join(", ")}.` : "Pick at least one."}</span>
         </fieldset>
 
         <label className="sw">
@@ -353,7 +399,10 @@ function Editor({ draft, others, onClose, onSaved }: { draft: Draft; others: Zin
               </button>
             </div>
           </div>
+          <span className="k">Website top bar</span>
           <NavPreview src={showStill ? stillSrc : animatedSrc} alt={d.alt || "Zinwe"} />
+          <span className="k">Windows app title bar</span>
+          <AppPreview src={showStill ? stillSrc : animatedSrc} alt={d.alt || "Zinwe"} />
           <span className="k">
             {showStill ? "What people who turn off animations see." : "Plays on a loop. Keep it short and calm: about 3 seconds."}
           </span>
@@ -373,8 +422,8 @@ function Editor({ draft, others, onClose, onSaved }: { draft: Draft; others: Zin
 
 /**
  * Zingles (F-15): our own animated logo for special days (Diwali, New Year...). Each one has an animated GIF/WebP, a
- * still PNG for reduced motion, dates and places; while it's live, the website and/or dashboard show it in the
- * logo's place. CRUD on /api/admin/zingles/ (multipart).
+ * still PNG for reduced motion, dates and places; while it's live, the website, dashboard and/or Windows app show
+ * it in the logo's place. CRUD on /api/admin/zingles/ (multipart).
  */
 export function ZinglesPage(): ReactElement {
   const load = useCallback(() => getZingles(), []);
@@ -407,7 +456,7 @@ export function ZinglesPage(): ReactElement {
     <>
       <PageHeader
         title="Zingles"
-        subtitle="Our logo, animated for special days. While one is live it takes the logo’s place on the website, the sign-in page and the dashboard, wherever you choose."
+        subtitle="Our logo, animated for special days. While one is live it takes the logo’s place on the website, the sign-in page, the dashboard and the Windows app, wherever you choose."
         onReload={reload}
         pending={pending}
       >
@@ -438,7 +487,7 @@ export function ZinglesPage(): ReactElement {
         <>
           <p className="k zg-now">
             {live.length
-              ? `Showing now: ${live.map((z) => `${z.name} (${PLACE_LABEL[z.places].toLowerCase()})`).join(", ")}.`
+              ? `Showing now: ${live.map((z) => `${z.name} (${whereLabel(z.places, Boolean(z.show_app)).toLowerCase()})`).join(", ")}.`
               : "Nothing showing now: everyone sees the normal logo."}
           </p>
           <section className="card zg-list" aria-label="Zingles">
@@ -468,7 +517,7 @@ export function ZinglesPage(): ReactElement {
                         <td className="num">
                           {fmt(z.starts_at)} → {fmt(z.ends_at)}
                         </td>
-                        <td>{PLACE_LABEL[z.places] ?? z.places}</td>
+                        <td>{whereLabel(z.places, Boolean(z.show_app))}</td>
                         <td>
                           <span className={`pill ${STATE[st][1]}`}>{STATE[st][0]}</span>
                         </td>

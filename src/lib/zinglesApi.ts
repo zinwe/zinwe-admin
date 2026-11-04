@@ -1,8 +1,11 @@
 /** Zingles (F-15, v1.3.3): our animated logo for special days, scheduled (/api/admin/zingles/, multipart). */
 import { request } from "./api";
 
-/** Where it shows: the website (the sign-in page counts as website), the customer dashboard, or both. */
-export type ZinglePlaces = "website" | "dashboard" | "both";
+/**
+ * Where it shows on the web: the website (the sign-in page counts as website), the customer dashboard, both, or
+ * none (the Windows app only: then `show_app` must be true).
+ */
+export type ZinglePlaces = "website" | "dashboard" | "both" | "none";
 /** live = showing now · scheduled = starts later · ended = past its end · off = switched off. */
 export type ZingleState = "live" | "scheduled" | "ended" | "off";
 
@@ -18,6 +21,8 @@ export interface Zingle {
   starts_at: string;
   ends_at: string | null;
   places: ZinglePlaces;
+  /** Also shows in the Windows app's title bar. */
+  show_app?: boolean;
   is_active: boolean;
   status?: ZingleState;
   created_at?: string;
@@ -30,10 +35,35 @@ export interface ZingleInput {
   starts_at: string;
   ends_at: string | null;
   places: ZinglePlaces;
+  show_app: boolean;
   is_active: boolean;
   /** Only sent when a new file is picked. */
   animated?: File | null;
   still?: File | null;
+}
+
+/** Where it shows, as three switches (website includes sign-in), and back to `places` + `show_app`. */
+export interface ZingleWhere {
+  website: boolean;
+  dashboard: boolean;
+  app: boolean;
+}
+
+export function whereOf(places: ZinglePlaces, showApp: boolean): ZingleWhere {
+  return { website: places === "website" || places === "both", dashboard: places === "dashboard" || places === "both", app: showApp };
+}
+
+export function placesOf(w: ZingleWhere): ZinglePlaces {
+  return w.website && w.dashboard ? "both" : w.website ? "website" : w.dashboard ? "dashboard" : "none";
+}
+
+/** "Website + dashboard + app", "App only"... */
+export function whereLabel(places: ZinglePlaces, showApp: boolean): string {
+  const w = whereOf(places, showApp);
+  const parts = [w.website && "website", w.dashboard && "dashboard", w.app && "app"].filter(Boolean) as string[];
+  if (!parts.length) return "Nowhere";
+  const text = parts.length === 1 && w.app ? "app only" : parts.join(" + ");
+  return text[0].toUpperCase() + text.slice(1);
 }
 
 export const animatedUrl = (z: Zingle): string => z.animated_url || z.animated || "";
@@ -55,6 +85,7 @@ function form(input: Partial<ZingleInput>): FormData {
   if (input.starts_at !== undefined) body.set("starts_at", input.starts_at);
   if (input.ends_at !== undefined) body.set("ends_at", input.ends_at ?? "");
   if (input.places !== undefined) body.set("places", input.places);
+  if (input.show_app !== undefined) body.set("show_app", input.show_app ? "true" : "false");
   if (input.is_active !== undefined) body.set("is_active", input.is_active ? "true" : "false");
   if (input.animated) body.set("animated", input.animated);
   if (input.still) body.set("still", input.still);
