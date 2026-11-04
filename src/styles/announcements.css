@@ -565,3 +565,24 @@
   color: #ffffff;
   font-weight: 600;
 }
+/* The pop-up's optional picture: on top, full width, 16:9, cropped to fill. */
+.an-pv__popcard--pic {
+  padding-top: 0;
+  overflow: hidden;
+}
+.an-pv__poppic {
+  display: block;
+  width: calc(100% + 36px);
+  margin: 0 -18px 4px;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: #fff6ee;
+}
+.an-pv__popcard--pic .an-pv__x {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+}

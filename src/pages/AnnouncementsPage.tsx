@@ -26,6 +26,7 @@ import {
   type PreviewAs,
 } from "../content/fixtures/announcements";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { NO_PICTURE_EDIT, PicturePicker, pictureChange, usePictureSrc, type PictureEdit } from "../components/PicturePicker";
 import { Modal } from "../components/Modal";
 import { PageHeader } from "../components/PageHeader";
 import { ErrorState, LoadingState, SampleTag } from "../components/States";
@@ -168,7 +169,7 @@ function emptyInput(): AnnouncementInput {
 }
 
 function toInput(a: Announcement): AnnouncementInput {
-  const { id: _id, status: _s, created_by: _c, created_at: _ca, updated_at: _u, offer_uses: _o, ...input } = a;
+  const { id: _id, status: _s, created_by: _c, created_at: _ca, updated_at: _u, offer_uses: _o, image_url: _i, ...input } = a;
   return input;
 }
 
@@ -225,6 +226,7 @@ export function AnnouncementsPage(): ReactElement {
   const [deleting, setDeleting] = useState<Announcement | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [previewAs, setPreviewAs] = useState<PreviewAs>("normal");
+  const [picture, setPicture] = useState<PictureEdit>(NO_PICTURE_EDIT);
   const composerRef = useRef<HTMLDivElement>(null);
   const [planCounts, setPlanCounts] = useState<Record<string, number>>({});
   const [total, setTotal] = useState<number | null>(null);
@@ -289,6 +291,7 @@ export function AnnouncementsPage(): ReactElement {
     setEditing(null);
     setLater(false);
     setErrors({});
+    setPicture(NO_PICTURE_EDIT);
   };
 
   const loadInto = (a: Announcement, dup: boolean) => {
@@ -303,6 +306,8 @@ export function AnnouncementsPage(): ReactElement {
       setLater(a.status === "scheduled");
     }
     setErrors({});
+    // A duplicate starts without the picture (files aren't copied); pick it again to keep it.
+    setPicture(NO_PICTURE_EDIT);
     window.setTimeout(() => composerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 30);
   };
 
@@ -342,7 +347,8 @@ export function AnnouncementsPage(): ReactElement {
       ...(form.placement === "website" ? { audience: "everyone" as const, plan_codes: [], owner_emails: [] } : {}),
     };
     try {
-      const saved = editing ? await updateAnnouncement(editing.id, payload) : await createAnnouncement(payload);
+      const image = pictureChange(picture, Boolean(editing?.image_url));
+      const saved = editing ? await updateAnnouncement(editing.id, payload, image) : await createAnnouncement(payload, image);
       const n = reachText;
       toast(
         editing
@@ -359,6 +365,10 @@ export function AnnouncementsPage(): ReactElement {
       const atFields = Object.fromEntries(Object.entries(fields).filter(([k]) => (FIELD_KEYS as ReadonlyArray<string>).includes(k))) as Partial<
         Record<FieldKey, string>
       >;
+      if (fields.image) {
+        toast(fields.image, "bad");
+        return;
+      }
       if (Object.keys(atFields).length) {
         setErrors(atFields);
         toast("Fix the highlighted fields first.", "bad");
@@ -645,6 +655,18 @@ export function AnnouncementsPage(): ReactElement {
               onChange={(e) => set("body", e.target.value)}
             />
           </div>
+
+          {form.placement === "popup" ? (
+            <div className="an-fl">
+              <PicturePicker
+                label="Picture"
+                edit={picture}
+                savedUrl={editing?.image_url}
+                onChange={setPicture}
+                hint="PNG, JPG or WebP, up to 2 MB. Shown on top of the pop-up, wide (16:9)."
+              />
+            </div>
+          ) : null}
 
           <div className="an-two">
             <div className="an-fl">
@@ -949,7 +971,7 @@ export function AnnouncementsPage(): ReactElement {
           </div>
         </section>
 
-        <Preview form={form} previewAs={previewAs} setPreviewAs={setPreviewAs} />
+        <Preview form={form} previewAs={previewAs} setPreviewAs={setPreviewAs} picture={picture} savedPicture={editing?.image_url} />
       </div>
 
       {confirming ? (
@@ -1126,11 +1148,16 @@ function Preview({
   form,
   previewAs,
   setPreviewAs,
+  picture,
+  savedPicture,
 }: {
   form: AnnouncementInput;
   previewAs: PreviewAs;
   setPreviewAs: (v: PreviewAs) => void;
+  picture: PictureEdit;
+  savedPicture: string | null | undefined;
 }): ReactElement {
+  const pictureSrc = usePictureSrc(picture, savedPicture);
   const winner = previewAs === "normal" ? "ann" : previewAs;
   const wi = BAR_LADDER.findIndex((l) => l.key === winner);
   // Pop-ups don't take part in the bar ladder: they open over the page.
@@ -1216,7 +1243,7 @@ function Preview({
             </div>
             <div className={"an-pv__main" + (popup ? " an-pv__main--popup" : "")}>
               {popup ? null : bar}
-              {popup ? <PopupPreview form={form} /> : null}
+              {popup ? <PopupPreview form={form} pictureSrc={pictureSrc} /> : null}
               <div aria-hidden="true" className="an-pv__content">
                 <span className="an-pv__hello">Good afternoon, {PREVIEW_OWNER}</span>
                 <div className="an-pv__tiles">
@@ -1258,18 +1285,21 @@ function Preview({
   );
 }
 
-/** The dashboard pop-up (F-11): a small card over the page with the headline, message and button. */
-function PopupPreview({ form }: { form: AnnouncementInput }): ReactElement {
+/** The dashboard pop-up (F-11): a small card over the page with the picture on top, headline, message and button. */
+function PopupPreview({ form, pictureSrc }: { form: AnnouncementInput; pictureSrc: string | null }): ReactElement {
   const btn = form.cta_label.trim() || (form.offer_plan ? offerButton(form.offer_price_inr) : "");
   return (
     <div className="an-pv__popup">
-      <div className="an-pv__popcard">
+      <div className={"an-pv__popcard" + (pictureSrc ? " an-pv__popcard--pic" : "")}>
+        {pictureSrc ? <img className="an-pv__poppic" src={pictureSrc} alt="" /> : null}
         <span aria-hidden="true" className="an-pv__x">
           <Icon name="close" size={14} strokeWidth={2} />
         </span>
-        <span className="an-pv__popicon">
-          <PathIcon d={KIND_ICON[form.kind]} size={20} strokeWidth={1.8} />
-        </span>
+        {pictureSrc ? null : (
+          <span className="an-pv__popicon">
+            <PathIcon d={KIND_ICON[form.kind]} size={20} strokeWidth={1.8} />
+          </span>
+        )}
         <b style={{ opacity: form.title.trim() ? 1 : 0.6 }}>{form.title.trim() || "Your headline"}</b>
         {form.body.trim() ? <span>{form.body.trim()}</span> : null}
         {btn ? <span className="an-pv__popbtn">{btn}</span> : null}

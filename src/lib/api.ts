@@ -638,6 +638,8 @@ export interface Announcement {
   offer_price_inr: string | null;
   /** How many owners have paid with the offer. */
   offer_uses: number;
+  /** The optional picture (PNG, JPG or WebP, up to 2 MB) on top of a pop-up: a public, versioned path, or null. */
+  image_url: string | null;
   starts_at: string;
   ends_at: string | null;
   is_active: boolean;
@@ -651,16 +653,34 @@ export interface Announcement {
 
 export type AnnouncementInput = Omit<
   Announcement,
-  "id" | "status" | "created_by" | "created_at" | "updated_at" | "offer_uses"
+  "id" | "status" | "created_by" | "created_at" | "updated_at" | "offer_uses" | "image_url"
 >;
+
+/** A picture change: a new file, or remove the current one. Sent as multipart only when there is one. */
+export type AnnouncementImageChange = { file: File } | { remove: true };
+
+/** The message as multipart: lists as JSON, empty values as "" (read as null by the server). */
+function announcementForm(input: Partial<AnnouncementInput>, image: AnnouncementImageChange): FormData {
+  const body = new FormData();
+  for (const [key, value] of Object.entries(input)) {
+    if (value === undefined) continue;
+    body.set(key, Array.isArray(value) ? JSON.stringify(value) : value === null ? "" : String(value));
+  }
+  if ("file" in image) body.set("image", image.file);
+  else body.set("remove_image", "true");
+  return body;
+}
+
+const announcementBody = (input: Partial<AnnouncementInput>, image?: AnnouncementImageChange | null) =>
+  image ? announcementForm(input, image) : JSON.stringify(input);
 
 export const getAnnouncements = () => request<Announcement[]>("/api/admin/announcements/");
 
-export const createAnnouncement = (input: AnnouncementInput) =>
-  request<Announcement>("/api/admin/announcements/", { method: "POST", body: JSON.stringify(input) });
+export const createAnnouncement = (input: AnnouncementInput, image?: AnnouncementImageChange | null) =>
+  request<Announcement>("/api/admin/announcements/", { method: "POST", body: announcementBody(input, image) });
 
-export const updateAnnouncement = (id: number, patch: Partial<AnnouncementInput>) =>
-  request<Announcement>(`/api/admin/announcements/${id}/`, { method: "PATCH", body: JSON.stringify(patch) });
+export const updateAnnouncement = (id: number, patch: Partial<AnnouncementInput>, image?: AnnouncementImageChange | null) =>
+  request<Announcement>(`/api/admin/announcements/${id}/`, { method: "PATCH", body: announcementBody(patch, image) });
 
 export const deleteAnnouncement = (id: number) =>
   request<null>(`/api/admin/announcements/${id}/`, { method: "DELETE" });

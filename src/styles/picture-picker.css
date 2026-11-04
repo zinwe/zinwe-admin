@@ -1,0 +1,40 @@
+/* PicturePicker: an optional picture for an announcement or pop-up (thumbnail, file input, Remove). */
+.pp {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pp__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.pp__thumb {
+  flex: 0 0 auto;
+  width: 128px;
+  aspect-ratio: 2 / 1;
+  border-radius: 8px;
+  border: 1px solid var(--line, #e5e5e5);
+  object-fit: cover;
+  background: #fff6ee;
+}
+.pp__thumb--empty {
+  display: block;
+  background: repeating-linear-gradient(45deg, #fafafa, #fafafa 6px, #f2f2f2 6px, #f2f2f2 12px);
+}
+.pp__side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+}
+.pp__file {
+  font: inherit;
+  font-size: 13px;
+  max-width: 100%;
+}
+.pp__rm {
+  padding: 4px 10px;
+  font-size: 13px;
+}
