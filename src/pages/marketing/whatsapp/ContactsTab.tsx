@@ -356,12 +356,12 @@ export function ContactsTab({ contacts, campaigns, reload }: { contacts: WaConta
     <>
       <section className="card finder" aria-label="Find contacts">
         <div className="fr">
-          <button type="button" className="btn dark" onClick={() => setAdding(true)}>Add contacts</button>
-          <div className="search"><input type="search" className="inp" aria-label="Search contacts" placeholder="Search business, name, phone or city" value={q} onChange={(e) => setQ(e.target.value)} /></div>
           <select className={"inp" + (seg ? " set" : "")} aria-label="Segment" value={seg} onChange={(e) => setSeg(e.target.value)}>
             <option value="">All segments</option>
             {segments.map((s) => <option key={s}>{s}</option>)}
           </select>
+          <div className="search"><input type="search" className="inp" aria-label="Search contacts" placeholder="Search business, name, phone or city" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+          <button type="button" className="btn dark" onClick={() => setAdding(true)}>Add contacts</button>
         </div>
         <div className="fr" role="group" aria-label="Show">
           {VIEWS.map(([k, label, f]) => <button key={k} type="button" className={"chip" + (view === k ? " on" : "")} aria-pressed={view === k} onClick={() => setView(k)}>{label} <span className="k">{contacts.filter(f).length}</span></button>)}

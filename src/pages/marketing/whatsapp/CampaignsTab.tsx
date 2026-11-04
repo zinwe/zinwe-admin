@@ -7,7 +7,41 @@ import {
   deleteWaCampaign, saveWaCampaign, waCampaignAction,
   type WaCampaign, type WaContact, type WaGoal, type WaKind, type WaTemplate,
 } from "../../../lib/whatsappApi";
+import { claudeCommand, OUTREACH_SKILL } from "./claudeCommand";
 import { Bubble, errText, sampleText } from "./shared";
+
+/** The saved campaign as a prompt for Claude in Chrome: copy it, paste it, and Claude runs today's round. */
+function ClaudeCommand({ campaign }: { campaign: WaCampaign }): ReactElement {
+  const toast = useToast();
+  const [confirmEach, setConfirmEach] = useState(true);
+  const text = claudeCommand(campaign, window.location.origin, confirmEach);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast("Command copied. Paste it into Claude in Chrome.");
+    } catch {
+      toast("Couldn't copy. Select the text and copy it yourself.", "bad");
+    }
+  };
+  return (
+    <section className="wa-claude" aria-labelledby="wa-claude-h">
+      <div className="fighead">
+        <h2 id="wa-claude-h">Launch with Claude in Chrome</h2>
+        <button type="button" className="btn dark sm" onClick={() => void copy()}>Copy command</button>
+      </div>
+      <span className="k">
+        Paste it into Claude in Chrome. Claude loads {OUTREACH_SKILL} first (the skill you update every week), works
+        through Today in this admin and WhatsApp Web side by side, and marks every send here as it goes. Built from the
+        saved campaign: save first after a change.
+      </span>
+      <label className="wa-check">
+        <input type="checkbox" checked={confirmEach} onChange={(e) => setConfirmEach(e.target.checked)} />
+        <span><b>Ask me before each send</b> <span className="k">Recommended. Off, Claude sends on its own within the daily limit.</span></span>
+      </label>
+      <textarea className="inp wa-claude__text" readOnly rows={10} value={text} aria-label="Command for Claude in Chrome" onFocus={(e) => e.currentTarget.select()} />
+    </section>
+  );
+}
 
 const STATUS: Record<string, [string, string]> = { draft: ["Draft", ""], live: ["Live", "good"], paused: ["Paused", "warn"] };
 const GOALS: [WaGoal, string][] = [["Conversations", "They reply to you"], ["Free signups", "They create a free account"], ["Installs", "Zinwe runs on one PC"], ["Paid plans", "They upgrade"]];
@@ -168,6 +202,7 @@ export function CampaignEditor({ campaign, templates, audiences, contacts, onSav
           </div>
         </form>
         <aside className="card afrail" aria-label="Preview">
+          {campaign?.id ? <ClaudeCommand campaign={campaign} /> : null}
           <h2>Preview on WhatsApp</h2>
           <div className="wa-chat">{preview ? <Bubble text={preview} meta="10:24" /> : <span className="k">Pick a first message.</span>}</div>
           <span className="k">{sample ? `Sample: ${sample.firm}` : "Sample: Rakesh, Gupta Exim"}</span>

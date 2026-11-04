@@ -230,7 +230,7 @@ export function TodayTab({ data, contacts, reload }: { data: WaToday; contacts: 
           <div className="fighead"><h2>Messages to send</h2><span className="k">{data.queue.length} due: after-YES steps first, then live campaigns</span></div>
           {data.queue.length ? data.queue.map((q) => (
             <div key={`${q.kind}-${q.contact.id}`} className="wa-item">
-              <Who c={q.contact} note={q.kind === "nurture" ? `After YES · ${q.template}` : KIND_LABEL[q.kind]} />
+              <Who c={q.contact} note={`${q.kind === "nurture" ? `After YES · ${q.template}` : KIND_LABEL[q.kind]}${q.contact.campaign_name ? ` · ${q.contact.campaign_name}` : ""}`} />
               {q.kind === "nurture" ? <TrackPicker c={q.contact} onDone={reload} /> : null}
               <Draft c={q.contact} kind={q.kind} send={q.kind} onDone={reload} />
             </div>
