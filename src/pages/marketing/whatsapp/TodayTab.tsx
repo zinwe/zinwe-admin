@@ -93,7 +93,7 @@ function Draft({ c, kind, send, onDone }: { c: WaContact; kind: WaKind; send: Wa
   const load = () => {
     setBusy(true);
     draftFor(c.id, kind)
-      .then((d) => { setText(d.text); setMedia(d.media ?? null); setHints({ creative: d.creative ?? "", notes: d.notes ?? "" }); setBy(d.by === "claude" ? `Personalised by Claude from ${d.template}` : `From the template ${d.template}`); })
+      .then((d) => { setText(d.text); setMedia(d.media ?? null); setHints({ creative: d.creative ?? "", notes: d.notes ?? "" }); setBy(`${d.by === "claude" ? `Personalised by Claude from ${d.template}` : `From the template ${d.template}`}${d.language === "hi" ? " · Hinglish" : ""}`); })
       .catch((err) => toast(errText(err, "Couldn't draft this message."), "bad"))
       .finally(() => setBusy(false));
   };

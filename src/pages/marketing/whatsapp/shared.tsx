@@ -1,7 +1,9 @@
 import { useEffect, useState, type ReactElement, type ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 import { ApiError } from "../../../lib/api";
-import { fetchWaMedia, type WaContact, type WaKind, type WaMedia, type WaParts, type WaStatus, type WaTrack } from "../../../lib/whatsappApi";
+import { fetchWaMedia, type WaContact, type WaKind, type WaLanguage, type WaMedia, type WaParts, type WaStatus, type WaTrack } from "../../../lib/whatsappApi";
+
+export const LANG_LABEL: Record<WaLanguage, string> = { en: "English", hi: "Hinglish" };
 
 export const WA_STATUS: Record<WaStatus, [string, string]> = {
   ready: ["Ready", ""], messaged: ["Messaged", "warn"], replied: ["Replied", "warn"], interested: ["Interested", "good"],
@@ -14,9 +16,9 @@ export const KIND_LABEL: Record<WaKind, string> = {
 export const TRACK_LABEL: Record<WaTrack, string> = { "": "Every YES", data: "Data safety", day: "Team's day", chat: "Team chat" };
 /** Fills the placeholders with a sample business, for previews. `first` = "" shows the no-name greeting:
  * "Hello Gupta Exim team" (as wa_names.py does when we don't know a real first name). */
-export const sampleText = (t: string, firm = "Gupta Exim", first = "Rakesh"): string =>
+export const sampleText = (t: string, firm = "Gupta Exim", first = "Rakesh", lang: WaLanguage = "en"): string =>
   t.replace(/^\s*(Hi|Hello)\s+\{\{FirstName\}\}/, "{{Greeting}}")
-    .replace(/\{\{Greeting\}\}/g, first ? `Hi ${first}` : `Hello ${firm} team`)
+    .replace(/\{\{Greeting\}\}/g, lang === "hi" ? (first ? `Namaste ${first} ji` : `Namaste ${firm} team`) : first ? `Hi ${first}` : `Hello ${firm} team`)
     .replace(/\{\{FirstName\}\}/g, first || `${firm} team`).replace(/\{\{(Firm|Business)\}\}/g, firm).replace(/\{\{City\}\}/g, "Noida")
     .replace(/\{\{HowWeKnow\}\}/g, "I found you on Google Maps, where you're rated 4.8.");
 

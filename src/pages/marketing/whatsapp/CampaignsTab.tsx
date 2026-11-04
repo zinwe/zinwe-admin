@@ -176,11 +176,18 @@ export function CampaignEditor({ campaign, templates, audiences, contacts, onSav
           </section>
           <section className="card afsec">
             <h2>Messages and sequence</h2>
+            <label className="fl">Language <span className="k">Pick the English templates below; Hinglish and 50/50 send each one’s Hinglish version where it has one</span>
+              <select className="inp" value={c.language ?? "en"} onChange={(e) => set({ language: e.target.value as WaCampaign["language"] })}>
+                <option value="en">English</option>
+                <option value="hi">Hinglish</option>
+                <option value="ab">Half English, half Hinglish (compare in Analytics)</option>
+              </select>
+            </label>
             {STEPS.map(([key, label, help]) => (
               <label key={key} className="fl">{label} <span className="k">{help}</span>
                 <select className="inp" value={(c[key] as number | null) ?? 0} onChange={(e) => set({ [key]: Number(e.target.value) || null } as Partial<WaCampaign>)}>
                   {key === "first" ? null : <option value={0}>{key === "followup" ? "No follow-up" : key === "touch3" || key === "touch4" ? "None" : "Use any template of this kind"}</option>}
-                  {templates.filter((t) => t.kind === key).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  {templates.filter((t) => t.kind === key && t.language !== "hi").map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
               </label>
             ))}

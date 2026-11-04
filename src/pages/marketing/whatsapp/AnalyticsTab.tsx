@@ -64,6 +64,30 @@ export function AnalyticsTab({ data }: { data: WaAnalytics }): ReactElement {
           <span className="k">WhatsApp read ticks aren't tracked: only what people reply and do. {data.blocked} numbers asked to stop.</span>
         </section>
       </div>
+      {data.languages ? (
+        <section className="card editor" aria-labelledby="wa-lang-h">
+          <div className="fighead"><h2 id="wa-lang-h">English vs Hinglish</h2><span className="k">By the language of each contact’s first message</span></div>
+          <div className="scroll">
+            <table className="tbl">
+              <thead><tr><th scope="col">Language</th><th scope="col" className="num">Messaged</th><th scope="col" className="num">Replied</th><th scope="col" className="num">Reply rate</th><th scope="col" className="num">Interested</th><th scope="col" className="num">YES rate</th><th scope="col" className="num">Asked to stop</th></tr></thead>
+              <tbody>
+                {data.languages.map((l) => (
+                  <tr key={l.language}>
+                    <th scope="row">{l.label}</th>
+                    <td className="num">{l.messaged}</td>
+                    <td className="num">{l.replied}</td>
+                    <td className="num">{pct(l.replied, l.messaged)}</td>
+                    <td className="num">{l.interested}</td>
+                    <td className="num">{pct(l.interested, l.messaged)}</td>
+                    <td className="num">{l.stopped}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <span className="k">{data.languages.every((l) => l.messaged >= 30) ? "Both have 30 or more: the difference starts to mean something." : "Wait for at least 30 first messages in each before choosing a winner. Set a campaign to “Half English, half Hinglish” to compare."}</span>
+        </section>
+      ) : null}
       <section className="card tablebox">
         <div className="scroll">
           <table className="tbl">

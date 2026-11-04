@@ -83,6 +83,8 @@ export interface WaCampaign {
   touch4: number | null;
   touch3_days: number;
   touch4_days: number;
+  /** Cold messages in English, Hinglish, or ab = half and half, to compare in Analytics. */
+  language?: WaLanguage | "ab";
   stats?: WaStats;
 }
 
@@ -107,10 +109,16 @@ export interface WaParts {
   notes?: string;
 }
 
+/** en = English, hi = Hinglish. */
+export type WaLanguage = "en" | "hi";
+
 export interface WaTemplate {
   id?: number;
   name: string;
   kind: WaKind;
+  language?: WaLanguage;
+  /** The same message in the other language; a campaign in Hinglish or 50/50 sends it. */
+  twin?: number | null;
   /** Composed from `parts` by the backend when the template is structured. */
   text: string;
   /** Empty = a free-text template. */
@@ -145,6 +153,8 @@ export interface WaAnalytics {
   total: WaStats;
   daily: { date: string; sent: number; replies: number }[];
   segments: { segment: string; messaged: number; replied: number }[];
+  /** English vs Hinglish, by the language of each contact's first message. */
+  languages?: { language: WaLanguage; label: string; messaged: number; replied: number; interested: number; stopped: number }[];
   campaigns: ({ id: number; name: string; status: string } & WaStats)[];
   blocked: number;
 }
@@ -183,7 +193,7 @@ export const patchWaContact = (id: number, patch: Partial<Pick<WaContact, "campa
   request<WaContact>(`${BASE}/contacts/${id}/`, { method: "PATCH", body: JSON.stringify(patch) });
 export const deleteWaContact = (id: number) => request<null>(`${BASE}/contacts/${id}/`, { method: "DELETE" });
 /** `template` picks any template for a one-off (Contacts → Send WhatsApp); without it the campaign's template of `kind`. */
-export const draftFor = (id: number, kind: WaKind, template?: number) => request<{ text: string; template: string; by: "claude" | "template"; media: WaMedia | null; creative?: string; notes?: string }>(`${BASE}/contacts/${id}/draft/`, post(template ? { kind, template } : { kind }));
+export const draftFor = (id: number, kind: WaKind, template?: number) => request<{ text: string; template: string; by: "claude" | "template"; media: WaMedia | null; creative?: string; notes?: string; language?: WaLanguage }>(`${BASE}/contacts/${id}/draft/`, post(template ? { kind, template } : { kind }));
 export const markSent = (id: number, kind: WaSendKind, text: string) => request<WaContact>(`${BASE}/contacts/${id}/sent/`, post({ kind, text }));
 export const logReply = (id: number, text: string) => request<WaContact>(`${BASE}/contacts/${id}/reply/`, post({ text }));
 export const actOn = (id: number, action: "interested" | "signed" | "notnow" | "stop" | "pause" | "resume" | "optin", note = "") => request<WaContact>(`${BASE}/contacts/${id}/act/`, post({ action, note }));

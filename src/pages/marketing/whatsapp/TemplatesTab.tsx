@@ -3,9 +3,9 @@ import { ConfirmDialog } from "../../../components/ConfirmDialog";
 import { Modal } from "../../../components/Modal";
 import { useToast } from "../../../components/Toast";
 import { ApiError } from "../../../lib/api";
-import { deleteWaTemplate, removeWaMedia, saveWaTemplate, uploadWaMedia, type WaKind, type WaParts, type WaTemplate, type WaTrack } from "../../../lib/whatsappApi";
+import { deleteWaTemplate, removeWaMedia, saveWaTemplate, uploadWaMedia, type WaKind, type WaLanguage, type WaParts, type WaTemplate, type WaTrack } from "../../../lib/whatsappApi";
 import {
-  Bubble, COLD_KINDS, composeParts, errText, isStructured, KIND_LABEL, MEDIA_ACCEPT, mediaProblem, mediaWord, MediaView, PARTS,
+  Bubble, COLD_KINDS, composeParts, errText, isStructured, KIND_LABEL, LANG_LABEL, MEDIA_ACCEPT, mediaProblem, mediaWord, MediaView, PARTS,
   sampleText as sample, sizeText, TRACK_LABEL,
 } from "./shared";
 
@@ -63,7 +63,7 @@ function MediaPicker({ t, cold, file, setFile, drop, setDrop }: {
   );
 }
 
-function Editor({ t, onClose, onSaved }: { t: WaTemplate; onClose: () => void; onSaved: () => void }): ReactElement {
+function Editor({ t, templates, onClose, onSaved }: { t: WaTemplate; templates: WaTemplate[]; onClose: () => void; onSaved: () => void }): ReactElement {
   const toast = useToast();
   const [draft, setDraft] = useState(t);
   const [structured, setStructured] = useState(isStructured(t.parts) || !t.id);
@@ -88,7 +88,7 @@ function Editor({ t, onClose, onSaved }: { t: WaTemplate; onClose: () => void; o
   const save = async () => {
     setBusy(true);
     try {
-      const saved = await saveWaTemplate({ ...draft, text, parts: structured ? parts : {} });
+      const saved = await saveWaTemplate({ ...draft, language: lang, text, parts: structured ? parts : {} });
       if (file && !cold) await uploadWaMedia(saved.id as number, file);
       else if (t.media && (drop || cold)) await removeWaMedia(saved.id as number);
       toast("Template saved.");
@@ -101,6 +101,8 @@ function Editor({ t, onClose, onSaved }: { t: WaTemplate; onClose: () => void; o
     }
   };
   const media = showing ? <MediaView media={file ? null : kept} file={file} /> : undefined;
+  const lang: WaLanguage = draft.language ?? "en";
+  const twins = templates.filter((x) => x.id !== draft.id && x.kind === draft.kind && (x.language ?? "en") !== lang);
   return (
     <Modal title={t.id ? "Edit template" : "New template"} subtitle="Placeholders: {{Business}}, {{City}}, {{HowWeKnow}} (“I found you on Google Maps, where you're rated 4.8.”) and {{FirstName}}. Keep a first message under 400 characters." onClose={onClose}
       footer={<><button type="button" className="btn" onClick={onClose}>Cancel</button><button type="button" className="btn dark" disabled={busy || !draft.name.trim() || !text.trim() || missing.length > 0} title={missing.length ? `Add: ${missing.join(", ")}` : undefined} onClick={() => void save()}>Save template</button></>}>
@@ -110,6 +112,20 @@ function Editor({ t, onClose, onSaved }: { t: WaTemplate; onClose: () => void; o
           <label className="fl">Type
             <select className="inp" value={draft.kind} onChange={(e) => setDraft({ ...draft, kind: e.target.value as WaKind })}>
               {KINDS.map((k) => <option key={k} value={k}>{KIND_LABEL[k]}</option>)}
+            </select>
+          </label>
+        </div>
+        <div className="wa-tform">
+          <label className="fl">Language
+            <select className="inp" value={lang} onChange={(e) => setDraft({ ...draft, language: e.target.value as WaLanguage })}>
+              <option value="en">English</option>
+              <option value="hi">Hinglish</option>
+            </select>
+          </label>
+          <label className="fl">Same message in {lang === "en" ? "Hinglish" : "English"} <span className="k">Campaigns in Hinglish or 50/50 send it</span>
+            <select className="inp" value={draft.twin ?? 0} onChange={(e) => setDraft({ ...draft, twin: Number(e.target.value) || null })}>
+              <option value={0}>None</option>
+              {twins.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
             </select>
           </label>
         </div>
@@ -152,8 +168,8 @@ function Editor({ t, onClose, onSaved }: { t: WaTemplate; onClose: () => void; o
 
         <span className="k">Preview · {sample(text).length} characters</span>
         <div className="wa-previews">
-          <div><span className="k">We know their name</span><div className="wa-chat"><Bubble text={sample(text) || " "} meta="10:24" media={media} /></div></div>
-          <div><span className="k">We don’t know a real name</span><div className="wa-chat"><Bubble text={sample(text, "Gupta Exim", "") || " "} meta="10:24" media={media} /></div></div>
+          <div><span className="k">We know their name</span><div className="wa-chat"><Bubble text={sample(text, "Gupta Exim", "Rakesh", lang) || " "} meta="10:24" media={media} /></div></div>
+          <div><span className="k">We don’t know a real name</span><div className="wa-chat"><Bubble text={sample(text, "Gupta Exim", "", lang) || " "} meta="10:24" media={media} /></div></div>
         </div>
       </div>
     </Modal>
@@ -163,9 +179,10 @@ function Editor({ t, onClose, onSaved }: { t: WaTemplate; onClose: () => void; o
 export function TemplatesTab({ templates, reload }: { templates: WaTemplate[]; reload: () => void }): ReactElement {
   const toast = useToast();
   const [kind, setKind] = useState<WaKind | "">("");
+  const [lang, setLang] = useState<WaLanguage | "">("");
   const [editing, setEditing] = useState<WaTemplate | null>(null);
   const [removing, setRemoving] = useState<WaTemplate | null>(null);
-  const rows = templates.filter((t) => !kind || t.kind === kind).sort((a, b) => (a.kind === "nurture" && b.kind === "nurture" ? (a.day ?? 0) - (b.day ?? 0) : 0));
+  const rows = templates.filter((t) => (!kind || t.kind === kind) && (!lang || (t.language ?? "en") === lang)).sort((a, b) => (a.kind === "nurture" && b.kind === "nurture" ? (a.day ?? 0) - (b.day ?? 0) : 0));
   return (
     <>
       <div className="fr between">
@@ -173,16 +190,23 @@ export function TemplatesTab({ templates, reload }: { templates: WaTemplate[]; r
           <button type="button" className={"chip" + (kind === "" ? " on" : "")} onClick={() => setKind("")}>All</button>
           {KINDS.map((k) => <button key={k} type="button" className={"chip" + (kind === k ? " on" : "")} onClick={() => setKind(k)}>{KIND_LABEL[k]}</button>)}
         </div>
-        <button type="button" className="btn dark" onClick={() => setEditing({ name: "", kind: kind || "first", text: "", parts: { intro: INTRO }, track: "", day: 0 })}>New template</button>
+        <div className="fr">
+          <select className={"inp" + (lang ? " set" : "")} aria-label="Language" value={lang} onChange={(e) => setLang(e.target.value as WaLanguage | "")}>
+            <option value="">All languages</option>
+            <option value="en">English</option>
+            <option value="hi">Hinglish</option>
+          </select>
+          <button type="button" className="btn dark" onClick={() => setEditing({ name: "", kind: kind || "first", language: lang || "en", text: "", parts: { intro: lang === "hi" ? "Vishal, Zinwe se. {{HowWeKnow}}" : INTRO }, track: "", day: 0 })}>New template</button>
+        </div>
       </div>
       <div className="wa-tgrid">
         {rows.map((t) => (
           <article key={t.id} className="card wa-tcard">
             <header>
-              <div><h3>{t.name}</h3><span className="k">{sample(t.text).length} characters{isStructured(t.parts) ? " · outreach structure" : ""}</span></div>
-              <span className={"pill" + (t.kind === "first" ? " warn" : t.kind === "nurture" ? " good" : "")}>{label(t)}</span>
+              <div><h3>{t.name}</h3><span className="k">{sample(t.text, "Gupta Exim", "Rakesh", t.language ?? "en").length} characters{isStructured(t.parts) ? " · outreach structure" : ""}{t.twin ? ` · has a ${t.language === "hi" ? "English" : "Hinglish"} version` : ""}</span></div>
+              <div className="fr">{t.language === "hi" ? <span className="pill accent">{LANG_LABEL.hi}</span> : null}<span className={"pill" + (t.kind === "first" ? " warn" : t.kind === "nurture" ? " good" : "")}>{label(t)}</span></div>
             </header>
-            <div className="wa-chat"><Bubble text={sample(t.text)} meta="10:24" media={t.media ? <MediaView media={t.media} /> : undefined} /></div>
+            <div className="wa-chat"><Bubble text={sample(t.text, "Gupta Exim", "Rakesh", t.language ?? "en")} meta="10:24" media={t.media ? <MediaView media={t.media} /> : undefined} /></div>
             {t.parts?.creative && !t.media ? <p className="k wa-hint"><b>Creative:</b> {t.parts.creative}</p> : null}
             <footer className="fr between">
               <button type="button" className="btn sm" onClick={() => setEditing(t)}>Edit</button>
@@ -204,7 +228,7 @@ export function TemplatesTab({ templates, reload }: { templates: WaTemplate[]; r
           <li><b>Notes for replies:</b> never sent; context for the next reply, like Claude in the browser.</li>
         </ol>
       </section>
-      {editing ? <Editor t={editing} onClose={() => setEditing(null)} onSaved={reload} /> : null}
+      {editing ? <Editor t={editing} templates={templates} onClose={() => setEditing(null)} onSaved={reload} /> : null}
       {removing ? (
         <ConfirmDialog title={`Delete "${removing.name}"?`} confirmLabel="Delete" danger onClose={() => setRemoving(null)}
           onConfirm={async () => {
