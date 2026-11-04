@@ -1,0 +1,91 @@
+/* MomentPreview: a copy of the dashboard pop-up (zinwe-frontend styles/dash13.css .zn-moment*), same sizes. */
+.mp {
+  width: 100%;
+  max-width: 440px;
+  background: #ffffff;
+  color: #141210;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 30px 80px -20px rgba(20, 18, 16, 0.45);
+  text-align: center;
+}
+.mp__pic {
+  position: relative;
+  aspect-ratio: 2 / 1;
+  background: #fff6ee;
+}
+.mp__pic img,
+.mp__art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.mp__x {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  color: #141210;
+  box-shadow: 0 1px 3px rgba(20, 18, 16, 0.15);
+}
+.mp__body {
+  padding: 20px 24px 22px;
+}
+.mp__kind {
+  display: inline-block;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #8a3a04;
+}
+.mp__title {
+  display: block;
+  font-size: 22px;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+.mp__title.is-empty {
+  opacity: 0.45;
+}
+.mp__body p {
+  margin: 10px auto 0;
+  max-width: 34ch;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: #404040;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.mp__acts {
+  display: grid;
+  gap: 6px;
+  margin-top: 20px;
+}
+.mp__go {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  border-radius: 12px;
+  background: #141210;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 15px;
+}
+.mp__later {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  color: #404040;
+  font-weight: 600;
+  font-size: 14px;
+}

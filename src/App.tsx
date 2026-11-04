@@ -15,6 +15,7 @@ import { SupportPage } from "./pages/SupportPage";
 import { FormsPage } from "./pages/FormsPage";
 import { ReleasesPage } from "./pages/ReleasesPage";
 import { AnnouncementsPage } from "./pages/AnnouncementsPage";
+import { PopupsPage } from "./pages/PopupsPage";
 import { PricingPage } from "./pages/PricingPage";
 import { ReleaseNotesPage } from "./pages/ReleaseNotesPage";
 import { TestimonialsPage } from "./pages/TestimonialsPage";
@@ -114,6 +115,7 @@ export function App(): ReactElement {
             <Route path="/marketing/whatsapp/:tab" element={<WhatsAppPage />} />
             <Route path="/marketing/whatsapp/:tab/:id" element={<WhatsAppPage />} />
             <Route path="/announcements" element={<AnnouncementsPage />} />
+            <Route path="/popups" element={<PopupsPage />} />
             <Route path="/pricing" element={<PricingPage />} />
             <Route path="/whats-new" element={<ReleaseNotesPage />} />
             <Route path="/testimonials" element={<TestimonialsPage />} />

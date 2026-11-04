@@ -62,6 +62,8 @@ const GROUPS: NavGroup[] = [
     label: "PUBLISH",
     items: [
       { to: "/announcements", label: "Announcements", icon: "announcements" },
+      // Dashboard pop-ups (Announcements placed as "popup"), with their numbers.
+      { to: "/popups", label: "Pop-ups", icon: "popup" },
       { to: "/whats-new", label: "What’s new", icon: "whatsnew" },
       { to: "/releases", label: "Releases", icon: "releases" },
       { to: "/testimonials", label: "Testimonials", icon: "testimonials" },

@@ -646,6 +646,8 @@ export interface Announcement {
   dismissible: boolean;
   priority: number;
   status: AnnouncementStatus;
+  /** A pop-up's numbers (null for bars; missing on an older backend). */
+  stats?: PopupStats | null;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -653,8 +655,38 @@ export interface Announcement {
 
 export type AnnouncementInput = Omit<
   Announcement,
-  "id" | "status" | "created_by" | "created_at" | "updated_at" | "offer_uses" | "image_url"
+  "id" | "status" | "created_by" | "created_at" | "updated_at" | "offer_uses" | "image_url" | "stats"
 >;
+
+/** Owners who saw a pop-up, views in all, owners who closed it, button presses and owners who pressed it. */
+export interface PopupStats {
+  owners: number;
+  views: number;
+  closed: number;
+  clicks: number;
+  clicked_owners: number;
+}
+
+/** The dashboard pop-ups only (placement "popup"), newest first, with their numbers. */
+export const getPopups = () => request<Announcement[]>("/api/admin/announcements/?placement=popup");
+
+/** How many customers a pop-up of this kind and audience reaches now (paid plans only get news, versions, wishes, maintenance). */
+export const getPopupReach = (kind: AnnouncementKind, audience: AnnouncementAudience, planCodes: string[], emails: string[]) =>
+  request<{ customers: number; total: number }>(
+    `/api/admin/announcements/reach/?placement=popup&kind=${kind}&audience=${audience}` +
+      `&plans=${encodeURIComponent(planCodes.join(","))}&emails=${encodeURIComponent(emails.join(","))}`,
+  );
+
+/** An account owner found by sign-in email, name or company (at most 10; at least 2 letters). */
+export interface OwnerHit {
+  id: number;
+  email: string;
+  full_name: string;
+  company: string;
+  plan: string;
+}
+
+export const searchOwners = (q: string) => request<OwnerHit[]>(`/api/admin/owners/search/?q=${encodeURIComponent(q)}`);
 
 /** A picture change: a new file, or remove the current one. Sent as multipart only when there is one. */
 export type AnnouncementImageChange = { file: File } | { remove: true };

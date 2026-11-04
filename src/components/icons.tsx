@@ -20,6 +20,7 @@ export const ICON = {
   testimonials: "M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2zM8 8h8M8 12h5",
   releases: "M21 8l-9-5-9 5v8l9 5 9-5zM3 8l9 5 9-5M12 13v8",
   blog: "M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16zM13.5 6.5l4 4",
+  popup: "M4 4h16v16H4zM4 11h16M8 15h8M9 18h6",
   zingle: "M3 13h18a9 5 0 0 1-18 0zM12 3c1.6 2 2 3.4 2 4.5a2 2 0 0 1-4 0C10 6.4 10.4 5 12 3zM8 21h8",
   logs: "M4 5h16v14H4zM8 10l2 2-2 2M13 14h3",
   docs: "M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h5",

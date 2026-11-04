@@ -169,7 +169,7 @@ function emptyInput(): AnnouncementInput {
 }
 
 function toInput(a: Announcement): AnnouncementInput {
-  const { id: _id, status: _s, created_by: _c, created_at: _ca, updated_at: _u, offer_uses: _o, image_url: _i, ...input } = a;
+  const { id: _id, status: _s, created_by: _c, created_at: _ca, updated_at: _u, offer_uses: _o, image_url: _i, stats: _st, ...input } = a;
   return input;
 }
 
