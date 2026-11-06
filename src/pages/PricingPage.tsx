@@ -1528,7 +1528,7 @@ function Offers({
           </div>
           <span className="k">
             Offers are dashboard announcements with a special price. Edit their wording, dates or audience in{" "}
-            <Link to="/announcements">Announcements</Link>.
+            <Link to="/interactions?kind=offer">User interactions</Link>.
           </span>
         </>
       )}

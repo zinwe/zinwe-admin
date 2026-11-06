@@ -587,7 +587,7 @@ function build(m: Metrics, side: Side): View {
       detail: `${a.title} · ${a.audience === "everyone" ? "all owners" : a.audience === "owners" ? "chosen customers" : `${a.audience} plans`}`,
       who: a.created_by || "—",
       iso: a.created_at,
-      to: "/announcements",
+      to: `/interactions?edit=${a.id}`,
     });
   activity.sort((a, b) => b.ts - a.ts);
 
