@@ -4,6 +4,8 @@ import { ApiError } from "../lib/api";
 import {
   CHANNEL_LABEL,
   CODE_RE,
+  couponDay as dayMon,
+  couponRange as validRange,
   createCoupon,
   firstMonth,
   getCouponUses,
@@ -22,7 +24,7 @@ import { useLoad } from "../lib/useLoad";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { PageHeader } from "../components/PageHeader";
 import { EmptyState, ErrorState, LoadingState } from "../components/States";
-import { Icon } from "../components/icons";
+import { Icon, PathIcon } from "../components/icons";
 import { useToast } from "../components/Toast";
 import "../styles/coupons.css";
 
@@ -36,7 +38,6 @@ const STATUS: Record<CouponStatus, [string, string]> = {
   cancelled: ["Cancelled", "muted"],
 };
 const CHANNELS: CouponChannel[] = ["whatsapp", "email", "popup", "other"];
-const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 /** Today in India as "2026-12-18" (coupon dates are IST days). */
 function todayIST(): string {
@@ -46,25 +47,6 @@ function addDays(ymd: string, n: number): string {
   const [y, m, d] = ymd.split("-").map(Number);
   const t = new Date(Date.UTC(y, m - 1, d + n));
   return t.toISOString().slice(0, 10);
-}
-function parts(ymd: string): { d: number; m: number; y: number } | null {
-  const hit = /^(\d{4})-(\d{2})-(\d{2})/.exec(ymd || "");
-  return hit ? { y: Number(hit[1]), m: Number(hit[2]) - 1, d: Number(hit[3]) } : null;
-}
-/** "16 Nov" (with the year when it isn't this year). */
-function dayMon(ymd: string | null): string {
-  const p = ymd ? parts(ymd) : null;
-  if (!p) return "";
-  return `${p.d} ${MON[p.m]}${p.y !== new Date().getFullYear() ? ` ${p.y}` : ""}`;
-}
-/** "16 Nov–15 Dec", "24–28 Jan", "From 16 Nov". */
-function validRange(from: string, to: string | null): string {
-  const a = parts(from);
-  const b = to ? parts(to) : null;
-  if (!a) return "—";
-  if (!b) return `From ${dayMon(from)}`;
-  if (a.y === b.y && a.m === b.m) return `${a.d}–${dayMon(to)}`;
-  return `${dayMon(from)}–${dayMon(to)}`;
 }
 function paidOn(iso: string): string {
   const d = new Date(iso);
@@ -248,7 +230,7 @@ export function CouponsPage(): ReactElement {
                           const st = STATUS[c.status] ?? [c.status, "muted"];
                           const act = second(c);
                           const on = pickId === c.id;
-                          const pct = c.max_uses ? Math.min(100, Math.max(2, Math.round((c.uses / c.max_uses) * 100))) : c.uses ? 100 : 2;
+                          const pct = c.max_uses ? Math.min(100, Math.max(2, Math.round((c.uses / c.max_uses) * 100))) : 0;
                           return (
                             <tr key={c.id} className={on ? "is-picked" : ""}>
                               <th scope="row">
@@ -272,9 +254,11 @@ export function CouponsPage(): ReactElement {
                               </td>
                               <td>
                                 <span className="num cp-used">{c.max_uses ? `${c.uses} of ${c.max_uses}` : `${c.uses} · no limit`}</span>
-                                <span className="cp-bar" aria-hidden="true">
-                                  <span style={{ width: `${pct}%` }} />
-                                </span>
+                                {c.max_uses ? (
+                                  <span className="cp-bar" aria-hidden="true">
+                                    <span style={{ width: `${pct}%` }} />
+                                  </span>
+                                ) : null}
                               </td>
                               <td className="r num" style={{ fontWeight: 600 }}>
                                 {money(c.paid_inr)}
@@ -686,7 +670,7 @@ function CouponForm({
         </div>
 
         <p className="cp-note">
-          <Icon name="warn" size={16} />
+          <PathIcon d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 11v5M12 8h.01" size={16} />
           <span>One code per company, ever. A company that already used a code sees “You have used a code before” at checkout.</span>
         </p>
 

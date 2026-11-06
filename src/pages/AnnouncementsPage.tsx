@@ -44,7 +44,7 @@ const KINDS: [AnnouncementKind, string][] = [
   ["version", "New release"],
   ["wish", "Wish"],
 ];
-const KIND_LABEL = Object.fromEntries(KINDS) as Record<AnnouncementKind, string>;
+const KIND_LABEL = { ...Object.fromEntries(KINDS), feedback_ask: "Feedback ask", upgrade_ask: "Upgrade ask" } as Record<AnnouncementKind, string>;
 
 const KIND_PILL: Record<AnnouncementKind, string> = {
   news: "an-k-info",
@@ -53,6 +53,8 @@ const KIND_PILL: Record<AnnouncementKind, string> = {
   maintenance: "an-k-maint",
   version: "an-k-rel",
   wish: "an-k-wish",
+  feedback_ask: "an-k-info",
+  upgrade_ask: "an-k-offer",
 };
 
 const KIND_ICON: Record<AnnouncementKind, string> = {
@@ -63,6 +65,8 @@ const KIND_ICON: Record<AnnouncementKind, string> = {
   version: "M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5z",
   // A small diya (oil lamp) with its flame: festival wishes.
   wish: "M3 13h18a9 5 0 0 1-18 0zM12 3c1.6 2 2 3.4 2 4.5a2 2 0 0 1-4 0C10 6.4 10.4 5 12 3z",
+  feedback_ask: "M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z",
+  upgrade_ask: "M12 19V5M6 11l6-6 6 6",
 };
 const SYS_ICON = {
   warn: "M12 3.5L2.5 20h19zM12 10v4.5M12 17.5h.01",
@@ -79,6 +83,8 @@ const KIND_BAR: Record<AnnouncementKind, [string, string, string, string]> = {
   maintenance: ["#FDEBDC", "#8A3A04", "#8A3A04", "#FFFFFF"],
   version: ["#F5F5F5", "#141210", "#141210", "#FFFFFF"],
   wish: ["#FFFFFF", "#141210", "#F26A0A", "#FFFFFF"],
+  feedback_ask: ["#F5F5F5", "#141210", "#141210", "#FFFFFF"],
+  upgrade_ask: ["#141210", "#FFFFFF", "#FFFFFF", "#141210"],
 };
 
 const TITLE_PH: Record<AnnouncementKind, string> = {
@@ -88,6 +94,8 @@ const TITLE_PH: Record<AnnouncementKind, string> = {
   maintenance: "e.g. Short maintenance on Sunday, 02:00–02:30 IST",
   version: "e.g. Windows app 1.3.0 is out",
   wish: "e.g. Happy Diwali from all of us at Zinwe",
+  feedback_ask: "e.g. How likely are you to tell a friend about Zinwe?",
+  upgrade_ask: "e.g. Your team has grown to 3 PCs",
 };
 
 const PLACEMENTS: [AnnouncementPlacement, string][] = [

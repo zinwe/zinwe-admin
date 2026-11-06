@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import type { AnnouncementKind } from "../lib/api";
 import "../styles/moment-preview.css";
 
@@ -64,6 +64,8 @@ export function MomentPreview({
   body,
   button,
   pictureSrc,
+  close,
+  children,
 }: {
   kind: AnnouncementKind;
   title: string;
@@ -71,7 +73,12 @@ export function MomentPreview({
   /** The button text; empty = no button, and "Not now" reads "Got it". */
   button: string;
   pictureSrc: string | null;
+  /** The second action's text (default "Not now" / "Got it"); "" hides it. */
+  close?: string;
+  /** Extra content between the text and the buttons (F-22: a coupon code, the 1-10 scale). */
+  children?: ReactNode;
 }): ReactElement {
+  const later = close ?? (button ? "Not now" : "Got it");
   const label = MOMENT_KIND_LABEL[kind];
   return (
     <div className="mp" aria-hidden="true">
@@ -87,9 +94,10 @@ export function MomentPreview({
         {label ? <span className="mp__kind">{label}</span> : null}
         <b className={"mp__title" + (title.trim() ? "" : " is-empty")}>{title.trim() || "Your title"}</b>
         {body.trim() ? <p>{body.trim()}</p> : null}
+        {children}
         <div className="mp__acts">
           {button ? <span className="mp__go">{button}</span> : null}
-          <span className="mp__later">{button ? "Not now" : "Got it"}</span>
+          {later ? <span className="mp__later">{later}</span> : null}
         </div>
       </div>
     </div>

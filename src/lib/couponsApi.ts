@@ -117,3 +117,27 @@ export function firstMonth(plan: CouponPlan, percent: number): { today: number; 
   const after = low !== null ? Math.max(raw, low) : raw;
   return { today, after, off: r2(today - after), capped: low !== null && raw < low, nothing: false };
 }
+
+/* ---------- Coupon dates ("2026-11-16", IST days) ---------- */
+
+const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function parts(ymd: string): { d: number; m: number; y: number } | null {
+  const hit = /^(\d{4})-(\d{2})-(\d{2})/.exec(ymd || "");
+  return hit ? { y: Number(hit[1]), m: Number(hit[2]) - 1, d: Number(hit[3]) } : null;
+}
+/** "16 Nov" (with the year when it isn't this year). */
+export function couponDay(ymd: string | null): string {
+  const p = ymd ? parts(ymd) : null;
+  if (!p) return "";
+  return `${p.d} ${MON[p.m]}${p.y !== new Date().getFullYear() ? ` ${p.y}` : ""}`;
+}
+/** "16 Nov–15 Dec", "24–28 Jan", "From 16 Nov". */
+export function couponRange(from: string, to: string | null): string {
+  const a = parts(from);
+  const b = to ? parts(to) : null;
+  if (!a) return "—";
+  if (!b) return `From ${couponDay(from)}`;
+  if (a.y === b.y && a.m === b.m) return `${a.d}–${couponDay(to)}`;
+  return `${couponDay(from)}–${couponDay(to)}`;
+}

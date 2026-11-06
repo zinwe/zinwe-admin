@@ -44,6 +44,8 @@ const KIND_LABEL: Record<AnnouncementKind, string> = {
   version: "New version",
   wish: "Wish",
   maintenance: "Maintenance",
+  feedback_ask: "Feedback ask",
+  upgrade_ask: "Upgrade ask",
 };
 /** What a paid plan may see as a pop-up (the server's rule, D5). */
 const PAID_KINDS: ReadonlySet<AnnouncementKind> = new Set(["news", "version", "wish", "maintenance"]);
