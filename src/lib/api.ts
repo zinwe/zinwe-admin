@@ -743,16 +743,6 @@ export function getInteractionReach(q: {
   return request<{ customers: number; total: number }>(`/api/admin/announcements/reach/?${parts.join("&")}`);
 }
 
-/** The dashboard pop-ups only (placement "popup"), newest first, with their numbers. */
-export const getPopups = () => request<Announcement[]>("/api/admin/announcements/?placement=popup");
-
-/** How many customers a pop-up of this kind and audience reaches now (paid plans only get news, versions, wishes, maintenance). */
-export const getPopupReach = (kind: AnnouncementKind, audience: AnnouncementAudience, planCodes: string[], emails: string[]) =>
-  request<{ customers: number; total: number }>(
-    `/api/admin/announcements/reach/?placement=popup&kind=${kind}&audience=${audience}` +
-      `&plans=${encodeURIComponent(planCodes.join(","))}&emails=${encodeURIComponent(emails.join(","))}`,
-  );
-
 /** An account owner found by sign-in email, name or company (at most 10; at least 2 letters). */
 export interface OwnerHit {
   id: number;
@@ -792,13 +782,6 @@ export const updateAnnouncement = (id: number, patch: Partial<AnnouncementInput>
 
 export const deleteAnnouncement = (id: number) =>
   request<null>(`/api/admin/announcements/${id}/`, { method: "DELETE" });
-
-/** How many customers a dashboard message with this audience reaches right now. */
-export const getAnnouncementReach = (audience: AnnouncementAudience, planCodes: string[], emails: string[] = []) =>
-  request<{ customers: number; total: number }>(
-    `/api/admin/announcements/reach/?audience=${audience}&plans=${encodeURIComponent(planCodes.join(","))}` +
-      `&emails=${encodeURIComponent(emails.join(","))}`,
-  );
 
 // --- Subscriptions (billing by country: currency, tax, payment link, invoices) ----------------
 
