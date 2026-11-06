@@ -106,16 +106,13 @@ export const CODE_RE = /^[A-Z0-9]{11}$/;
 const r2 = (n: number) => Math.round(n * 100) / 100;
 
 /**
- * What a plan costs the first month with this % off: today's price less the %, never below the lowest price
- * (band_min_inr; null = no floor). `nothing` when the plan is already at or below its lowest price.
+ * What a plan costs the first month with this % off: today's price less exactly the code's % (at most 40%).
+ * Owner decision (6 Nov 2026): no lowest-price floor for coupons, the plan prices stay as they are.
  */
-export function firstMonth(plan: CouponPlan, percent: number): { today: number; after: number; off: number; capped: boolean; nothing: boolean } {
+export function firstMonth(plan: CouponPlan, percent: number): { today: number; after: number; off: number } {
   const today = Number(plan.price_inr_monthly) || 0;
-  const low = plan.band_min_inr === null || plan.band_min_inr === undefined || plan.band_min_inr === "" ? null : Number(plan.band_min_inr);
-  if (low !== null && low >= today) return { today, after: today, off: 0, capped: false, nothing: true };
-  const raw = r2(today * (1 - percent / 100));
-  const after = low !== null ? Math.max(raw, low) : raw;
-  return { today, after, off: r2(today - after), capped: low !== null && raw < low, nothing: false };
+  const after = r2(today * (1 - percent / 100));
+  return { today, after, off: r2(today - after) };
 }
 
 /* ---------- Coupon dates ("2026-11-16", IST days) ---------- */

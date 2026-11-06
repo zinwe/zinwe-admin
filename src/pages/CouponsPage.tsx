@@ -61,13 +61,6 @@ function planNames(codes: string[], plans: CouponPlan[]): string {
   return codes.map((c) => plans.find((p) => p.code === c)?.name ?? c).join(", ");
 }
 
-/** "Startups ₹650 · Teams ₹1,200 · Businesses ₹1,950" from the price band minimums. */
-function floorLine(plans: CouponPlan[]): string {
-  return paidPlans(plans)
-    .map((p) => `${p.name} ${p.band_min_inr ? money(p.band_min_inr) : "no lowest price"}`)
-    .join(" · ");
-}
-
 function source(c: Coupon): string {
   return [CHANNEL_LABEL[c.channel] ?? c.channel, c.campaign].filter(Boolean).join(" · ");
 }
@@ -78,8 +71,8 @@ type View = { kind: "list" } | { kind: "new"; from: Coupon | null } | { kind: "e
 
 /**
  * Coupons (F-21, board LabV135AdminCoupons): codes for WhatsApp, email and pop-up offers and which ones bring paying
- * customers. A code takes its % off today's price, first month of monthly billing only, never below the plan's lowest
- * price (the price band minimum in Plans & pricing). One code per company, ever.
+ * customers. A code takes exactly its own % (at most 40%) off today's price, first month of monthly billing only; the
+ * plan prices themselves never change. One code per company, ever.
  */
 export function CouponsPage(): ReactElement {
   const load = useCallback(() => getCoupons(), []);
@@ -290,12 +283,9 @@ export function CouponsPage(): ReactElement {
               </p>
               <div className="cp-floor">
                 <span>
-                  <b>Lowest prices</b> (the price band in Plans &amp; pricing): {floorLine(plans) || "no paid plans"}. A code never
-                  takes a plan below its lowest price.
+                  A code takes exactly its own % off today’s price, at most 40%, for the first month of monthly billing. Plan
+                  prices stay as they are.
                 </span>
-                <Link to="/pricing" className="cp-floor__link">
-                  Change in Plans &amp; pricing
-                </Link>
               </div>
             </div>
 
@@ -701,16 +691,13 @@ function CouponForm({
                 {r.off > 0 ? <s className="k">{money(r.today)}</s> : null} <b>{money(r.after)}</b>
               </span>
             </span>
-            <span className={"cp-pv__note" + (r.capped || r.nothing ? " is-capped" : "")}>
-              {r.nothing
-                ? "This plan is already at its lowest price, so the code gives nothing."
-                : `${r.capped ? "Stopped at the lowest price" : `Saves ${money(r.off)}`}${p.pcs ? ` · ${money(Math.round(r.after / p.pcs))} per PC a month for ${p.pcs} PCs` : ""}`}
+            <span className="cp-pv__note">
+              {`Saves ${money(r.off)}${p.pcs ? ` · ${money(Math.round(r.after / p.pcs))} per PC a month for ${p.pcs} PCs` : ""}`}
             </span>
           </div>
         ))}
         <span className="k cp-pv__foot">
-          Prices before GST. From the second month they pay today’s price. Lowest prices: {floorLine(plans) || "none"} (
-          <Link to="/pricing">Plans &amp; pricing</Link>).
+          Prices before GST. From the second month they pay today’s price.
         </span>
       </aside>
     </div>
