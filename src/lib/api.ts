@@ -123,6 +123,8 @@ export interface Payment {
   duplicate_of?: DuplicatePayment | null;
   /** The tax invoice of an approved payment. */
   invoice_number?: string | null;
+  /** F-21: the coupon code used on this payment (first month, monthly billing); null when none. */
+  coupon_code?: string | null;
 }
 
 export interface DuplicatePayment {
@@ -767,6 +769,8 @@ export interface AdminSubscription {
     amount: string;
     currency: string;
     submitted_at: string;
+    /** F-21: the coupon code used on this payment; null when none (missing on an older server). */
+    coupon_code?: string | null;
   } | null;
   invoices: Array<{ payment_id: number; number: string; issued_at: string; total: string; currency: string }>;
   created_at: string;

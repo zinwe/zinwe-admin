@@ -15,6 +15,7 @@ import { SupportPage } from "./pages/SupportPage";
 import { FormsPage } from "./pages/FormsPage";
 import { ReleasesPage } from "./pages/ReleasesPage";
 import { InteractionsPage } from "./pages/InteractionsPage";
+import { CouponsPage } from "./pages/CouponsPage";
 import { PricingPage } from "./pages/PricingPage";
 import { ReleaseNotesPage } from "./pages/ReleaseNotesPage";
 import { TestimonialsPage } from "./pages/TestimonialsPage";
@@ -113,6 +114,7 @@ export function App(): ReactElement {
             <Route path="/marketing/whatsapp" element={<WhatsAppPage />} />
             <Route path="/marketing/whatsapp/:tab" element={<WhatsAppPage />} />
             <Route path="/marketing/whatsapp/:tab/:id" element={<WhatsAppPage />} />
+            <Route path="/coupons" element={<CouponsPage />} />
             {/* F-22: Pop-ups and Announcements are kinds of User interactions now; old links open it (one version). */}
             <Route path="/interactions" element={<InteractionsPage />} />
             <Route path="/announcements" element={<Navigate to="/interactions?kind=announcement" replace />} />
