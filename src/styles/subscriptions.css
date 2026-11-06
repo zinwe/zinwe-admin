@@ -199,3 +199,9 @@ button.ss-kpi:hover {
   font-size: 13px;
   font-weight: 600;
 }
+.ss-coupon {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}

@@ -410,6 +410,7 @@ export function SubscriptionsPage(): ReactElement {
                     </th>
                     <th scope="col">Plan</th>
                     <th scope="col">Cycle</th>
+                    <th scope="col">Coupon</th>
                     <th scope="col" className="r">
                       Amount
                     </th>
@@ -441,7 +442,7 @@ export function SubscriptionsPage(): ReactElement {
                         {totals.note}
                       </span>
                     </th>
-                    <td colSpan={2} className="k">
+                    <td colSpan={3} className="k">
                       India · ₹ · {totals.inrN}
                     </td>
                     <td className="r num" style={{ fontWeight: 600 }}>
@@ -456,7 +457,7 @@ export function SubscriptionsPage(): ReactElement {
                     <td colSpan={5} />
                   </tr>
                   <tr>
-                    <td colSpan={2} className="k">
+                    <td colSpan={3} className="k">
                       Abroad · $ · {totals.usdN}
                     </td>
                     <td className="r num" style={{ fontWeight: 600 }}>
@@ -565,6 +566,7 @@ function PaymentRow({
         {r.sub.is_trial ? <span className="k" style={{ display: "block", fontWeight: 400 }}>Trial</span> : null}
       </td>
       <td>{r.cycle}</td>
+      <td>{pay?.coupon_code ? <span className="mono ss-coupon">{pay.coupon_code}</span> : <span className="k">—</span>}</td>
       {pay ? (
         <>
           <td className="r num">{money(r.base, r.cur)}</td>

@@ -451,6 +451,12 @@ function History({ row }: { row: Subscriber }): ReactElement {
                     </>
                   ) : null}
                   {p.covers_from ? ` · ${period(p.covers_from, p.covers_until)}` : ""}
+                  {p.coupon_code ? (
+                    <>
+                      {" · coupon "}
+                      <span className="mono">{p.coupon_code}</span>
+                    </>
+                  ) : null}
                 </span>
                 {p.rejection_reason ? <span className="sb-hist__reason">Reason sent: {p.rejection_reason}</span> : null}
                 {p.staff_amount && Math.abs(Number(p.staff_amount) - Number(p.due_total ?? p.amount_inr)) > 0.005 ? (

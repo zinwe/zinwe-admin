@@ -56,14 +56,15 @@ const GROUPS: NavGroup[] = [
       { to: "/marketing/persona", label: "Persona", icon: "audience" },
       { to: "/marketing/email", label: "Email campaigns", icon: "mail" },
       { to: "/marketing/whatsapp", label: "WhatsApp", icon: "chat" },
+      // F-21 (v1.3.5): coupon codes for WhatsApp, email and pop-up offers (first month of monthly billing).
+      { to: "/coupons", label: "Coupons", icon: "coupon" },
+      // F-22 (v1.3.5): offers, feedback asks, upgrade asks, wishes, pop-ups and announcements in one place.
+      { to: "/interactions", label: "User interactions", icon: "interactions" },
     ],
   },
   {
     label: "PUBLISH",
     items: [
-      { to: "/announcements", label: "Announcements", icon: "announcements" },
-      // Dashboard pop-ups (Announcements placed as "popup"), with their numbers.
-      { to: "/popups", label: "Pop-ups", icon: "popup" },
       { to: "/whats-new", label: "What’s new", icon: "whatsnew" },
       { to: "/releases", label: "Releases", icon: "releases" },
       { to: "/testimonials", label: "Testimonials", icon: "testimonials" },

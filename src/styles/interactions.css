@@ -1,0 +1,394 @@
+/* User interactions (pages/InteractionsPage.tsx + pages/interactions/*, F-22): tiles, kind chips, the list and the 4-step editor. */
+
+.ix-tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+@media (max-width: 1000px) {
+  .ix-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.ix-tile {
+  padding: 18px;
+}
+.ix-tile__label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+.ix-tile__value {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  line-height: 30px;
+}
+
+.ix-bar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.ix-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ix-chips .chip {
+  min-height: 34px;
+  padding: 0 12px;
+}
+.ix-chips .chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.inp.ix-state {
+  width: auto;
+  min-width: 200px;
+  min-height: 34px;
+}
+
+.ix-list {
+  overflow: hidden;
+}
+.ix-tbl td,
+.ix-tbl th[scope="row"] {
+  vertical-align: middle;
+}
+.ix-tbl th[scope="row"] {
+  display: table-cell;
+}
+.ix-name {
+  display: block;
+  max-width: 34ch;
+  margin-bottom: 3px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.ix-often {
+  font-size: 13px;
+}
+.ix-res {
+  display: block;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.ix-res__note {
+  display: block;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.ix-acts {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.btn.ix-more {
+  min-width: 34px;
+  padding: 0 8px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+.ix-foot {
+  margin: 10px 0 0;
+  font-size: 12px;
+  max-width: 110ch;
+}
+.ix-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ix-menu button {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+}
+.ix-menu button:hover,
+.ix-menu button:focus-visible {
+  background: var(--line-soft);
+}
+.ix-menu button.is-bad {
+  color: var(--bad);
+}
+
+/* Editor */
+.ix-ed {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 420px;
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 1100px) {
+  .ix-ed {
+    grid-template-columns: 1fr;
+  }
+}
+.ix-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.ix-form__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.ix-form__head h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.ix-step {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ix-step__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.ix-step__n {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--on-ink, #fff);
+  font-size: 12px;
+  font-weight: 700;
+}
+.ix-step__title {
+  font-size: 15px;
+  font-weight: 700;
+}
+.ix-step .k {
+  font-size: 12px;
+}
+.ix-note {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.ix-warn {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--accent-line);
+  background: var(--accent-tint);
+  color: var(--accent-ink);
+  font-size: 13px;
+}
+.ix-reach {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.ix-fl {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.ix-fl__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.ix-two {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+.ix-inline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.inp.ix-num {
+  width: 90px;
+}
+.ta.ix-ta {
+  min-height: 72px;
+}
+.ix-set {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ix-set legend {
+  margin-bottom: 8px;
+}
+.ix-fixed {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: #fafafa;
+  border: 1px dashed var(--line-2);
+  overflow-wrap: anywhere;
+}
+.ix-bar-opts {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ix-form__foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.btn.ix-cancel {
+  margin-left: auto;
+}
+
+/* Picked people */
+.ix-people {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ix-hits {
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  max-height: 220px;
+  overflow: auto;
+}
+.ix-hits button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.ix-hits button:hover,
+.ix-hits button:focus-visible {
+  background: var(--line-soft);
+}
+
+/* Preview */
+.ix-pv {
+  position: sticky;
+  top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #f0f0f0;
+  min-width: 0;
+}
+.ix-pv__label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+}
+.ix-pv__stage {
+  display: flex;
+  justify-content: center;
+}
+.ix-pv__reach,
+.ix-pv__rule {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.ix-pvas {
+  flex-wrap: wrap;
+}
+.ix-ladder {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+/* Show it to me first */
+.ix-owner-dialog {
+  width: min(760px, calc(100vw - 32px));
+}
+.ix-named {
+  min-height: 32px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.ix-stage {
+  position: relative;
+  min-height: 600px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.ix-stage__page {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  opacity: 0.5;
+}
+.ix-stage__page span {
+  display: block;
+  height: 70px;
+  border-radius: 12px;
+  background: #f0f0f0;
+}
+.ix-stage__page .ix-stage__h {
+  height: auto;
+  background: none;
+  font-size: 20px;
+  font-weight: 700;
+}
+.ix-stage__page .ix-stage__big {
+  height: 160px;
+}
+.ix-stage__wash {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(20, 18, 16, 0.32);
+}
+.ix-stage__rule {
+  margin: 12px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+}

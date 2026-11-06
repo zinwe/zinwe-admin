@@ -123,6 +123,8 @@ export interface Payment {
   duplicate_of?: DuplicatePayment | null;
   /** The tax invoice of an approved payment. */
   invoice_number?: string | null;
+  /** F-21: the coupon code used on this payment (first month, monthly billing); null when none. */
+  coupon_code?: string | null;
 }
 
 export interface DuplicatePayment {
@@ -610,11 +612,22 @@ export const updatePricing = (code: string, body: PricingPatch) => request<PlanP
 
 // --- Announcements (notification bars on the customer dashboard and the website, and dashboard pop-ups) ---
 
-/** `wish` (v1.3.3): festival and occasion wishes, shown to every plan. */
-export type AnnouncementKind = "offer" | "discount" | "news" | "version" | "maintenance" | "wish";
+/**
+ * `wish` (v1.3.3): festival and occasion wishes, shown to every plan. `feedback_ask` (a 1-10 question, answers land in
+ * Inbox → Feedback) and `upgrade_ask` (v1.3.5, F-22 User interactions): pop-ups only.
+ */
+export type AnnouncementKind = "offer" | "discount" | "news" | "version" | "maintenance" | "wish" | "feedback_ask" | "upgrade_ask";
 /** `popup` (v1.3.3): a pop-up over the customer dashboard (dashboard only), on the server's rhythm. */
 export type AnnouncementPlacement = "dashboard" | "website" | "both" | "popup";
-export type AnnouncementAudience = "everyone" | "free" | "paid" | "plans" | "owners";
+/**
+ * F-22 adds `new7` (signed up in the last 7 days), `plan_ending` (plan or trial ends within 7 days) and `quiet` (no
+ * owner sign-in for `audience_days` days, default 14). Owners only, never employees.
+ */
+export type AnnouncementAudience = "everyone" | "free" | "paid" | "plans" | "owners" | "new7" | "plan_ending" | "quiet";
+/** F-22: the moment an interaction shows. `signin` is the old behaviour (and the default). */
+export type InteractionTrigger = "signin" | "signout" | "days_after_signup" | "first_pc" | "before_plan_end" | "date";
+/** F-22: per owner. `rhythm` = the pop-up rhythm (pop-up default), `until_closed` = the bar default. */
+export type InteractionFrequency = "rhythm" | "once" | "every" | "every_14d" | "until_closed";
 /** live = showing now · scheduled = starts later · ended = past its end · off = switched off. */
 export type AnnouncementStatus = "live" | "scheduled" | "ended" | "off";
 
@@ -646,8 +659,18 @@ export interface Announcement {
   dismissible: boolean;
   priority: number;
   status: AnnouncementStatus;
-  /** A pop-up's numbers (null for bars; missing on an older backend). */
-  stats?: PopupStats | null;
+  /** F-22: when it shows; N for days_after_signup / before_plan_end. Missing on an older server = sign-in. */
+  trigger?: InteractionTrigger;
+  trigger_days?: number | null;
+  /** N for the "quiet" audience (default 14). */
+  audience_days?: number | null;
+  frequency?: InteractionFrequency;
+  /** An offer with a coupon code (Coupons id); "Use the code" opens the plan page with the code filled in. */
+  coupon?: number | null;
+  /** The coupon's code, when the server sends it with the row. */
+  coupon_code?: string | null;
+  /** The numbers (pop-ups; every row with ?view=interactions). Missing on an older backend. */
+  stats?: InteractionStats | null;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -655,7 +678,7 @@ export interface Announcement {
 
 export type AnnouncementInput = Omit<
   Announcement,
-  "id" | "status" | "created_by" | "created_at" | "updated_at" | "offer_uses" | "image_url" | "stats"
+  "id" | "status" | "created_by" | "created_at" | "updated_at" | "offer_uses" | "image_url" | "stats" | "coupon_code"
 >;
 
 /** Owners who saw a pop-up, views in all, owners who closed it, button presses and owners who pressed it. */
@@ -667,15 +690,58 @@ export interface PopupStats {
   clicked_owners: number;
 }
 
-/** The dashboard pop-ups only (placement "popup"), newest first, with their numbers. */
-export const getPopups = () => request<Announcement[]>("/api/admin/announcements/?placement=popup");
+/**
+ * F-22 numbers for one interaction (?view=interactions): owners it was shown to, views, closes, button presses,
+ * feedback answers and their average (1-10), and owners who paid within 7 days after a click. The pop-up fields above
+ * may come too (older server).
+ */
+export interface InteractionStats extends Partial<PopupStats> {
+  shown?: number;
+  feedback_count?: number;
+  feedback_avg?: number | string | null;
+  paid_after?: number;
+}
 
-/** How many customers a pop-up of this kind and audience reaches now (paid plans only get news, versions, wishes, maintenance). */
-export const getPopupReach = (kind: AnnouncementKind, audience: AnnouncementAudience, planCodes: string[], emails: string[]) =>
-  request<{ customers: number; total: number }>(
-    `/api/admin/announcements/reach/?placement=popup&kind=${kind}&audience=${audience}` +
-      `&plans=${encodeURIComponent(planCodes.join(","))}&emails=${encodeURIComponent(emails.join(","))}`,
-  );
+export interface InteractionTotals {
+  live: number;
+  scheduled: number;
+  paused: number;
+  shown_this_month: number;
+  feedback_count: number;
+  feedback_avg: number | string | null;
+  paid_after: number;
+}
+
+/**
+ * Every announcement and pop-up with its numbers, plus the tiles' totals. Read defensively: a list (older server) or
+ * {announcements | interactions | results: [...], totals}.
+ */
+export async function getInteractions(): Promise<{ rows: Announcement[]; totals: InteractionTotals | null }> {
+  const data = await request<unknown>("/api/admin/announcements/?view=interactions");
+  if (Array.isArray(data)) return { rows: data as Announcement[], totals: null };
+  const o = (data ?? {}) as Record<string, unknown>;
+  const list = o.announcements ?? o.interactions ?? o.results ?? o.rows ?? [];
+  return { rows: Array.isArray(list) ? (list as Announcement[]) : [], totals: (o.totals as InteractionTotals | undefined) ?? null };
+}
+
+/** How many owners an interaction reaches now: its placement and kind count for pop-ups (paid plans never get offers). */
+export function getInteractionReach(q: {
+  placement: AnnouncementPlacement;
+  kind: AnnouncementKind;
+  audience: AnnouncementAudience;
+  plan_codes: string[];
+  owner_emails: string[];
+  audience_days: number | null;
+}) {
+  const parts = [
+    q.placement === "popup" ? `placement=popup&kind=${q.kind}` : "",
+    `audience=${q.audience}`,
+    `plans=${encodeURIComponent(q.plan_codes.join(","))}`,
+    `emails=${encodeURIComponent(q.owner_emails.join(","))}`,
+    q.audience === "quiet" && q.audience_days ? `audience_days=${q.audience_days}` : "",
+  ].filter(Boolean);
+  return request<{ customers: number; total: number }>(`/api/admin/announcements/reach/?${parts.join("&")}`);
+}
 
 /** An account owner found by sign-in email, name or company (at most 10; at least 2 letters). */
 export interface OwnerHit {
@@ -716,13 +782,6 @@ export const updateAnnouncement = (id: number, patch: Partial<AnnouncementInput>
 
 export const deleteAnnouncement = (id: number) =>
   request<null>(`/api/admin/announcements/${id}/`, { method: "DELETE" });
-
-/** How many customers a dashboard message with this audience reaches right now. */
-export const getAnnouncementReach = (audience: AnnouncementAudience, planCodes: string[], emails: string[] = []) =>
-  request<{ customers: number; total: number }>(
-    `/api/admin/announcements/reach/?audience=${audience}&plans=${encodeURIComponent(planCodes.join(","))}` +
-      `&emails=${encodeURIComponent(emails.join(","))}`,
-  );
 
 // --- Subscriptions (billing by country: currency, tax, payment link, invoices) ----------------
 
@@ -767,6 +826,8 @@ export interface AdminSubscription {
     amount: string;
     currency: string;
     submitted_at: string;
+    /** F-21: the coupon code used on this payment; null when none (missing on an older server). */
+    coupon_code?: string | null;
   } | null;
   invoices: Array<{ payment_id: number; number: string; issued_at: string; total: string; currency: string }>;
   created_at: string;

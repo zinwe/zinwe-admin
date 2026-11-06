@@ -1,0 +1,357 @@
+/* Coupons (pages/CouponsPage.tsx, F-21): tiles, the codes table, who used a code, and the new / edit form with its preview. */
+
+.cp-tabs {
+  margin-bottom: 20px;
+}
+
+.cp-tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+@media (max-width: 1000px) {
+  .cp-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.cp-tile {
+  padding: 18px;
+}
+.cp-tile__label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+.cp-tile__value {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  line-height: 30px;
+  overflow-wrap: anywhere;
+}
+.cp-tile__value.mono {
+  font-size: 22px;
+  letter-spacing: 0.02em;
+}
+
+.cp-main {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+.cp-col {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+@media (max-width: 1100px) {
+  .cp-main {
+    flex-direction: column;
+  }
+}
+
+.cp-list {
+  overflow: hidden;
+}
+.cp-tbl td,
+.cp-tbl th[scope="row"] {
+  vertical-align: middle;
+}
+.cp-tbl th[scope="row"] {
+  display: table-cell;
+  font-weight: 400;
+}
+.cp-tbl tr.is-picked td,
+.cp-tbl tr.is-picked th {
+  background: var(--accent-tint-2);
+}
+.cp-tbl tr.is-picked th {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.cp-code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--line-2);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.cp-code:hover {
+  text-decoration-color: var(--ink);
+}
+.cp-src {
+  display: block;
+  font-size: 12px;
+}
+.cp-used {
+  display: block;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.cp-bar {
+  display: block;
+  height: 4px;
+  margin-top: 4px;
+  min-width: 60px;
+  border-radius: 999px;
+  background: var(--line-soft);
+  overflow: hidden;
+}
+.cp-bar span {
+  display: block;
+  height: 4px;
+  background: var(--ink);
+}
+.cp-acts {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.cp-foot {
+  margin: 0;
+  font-size: 12px;
+}
+.cp-floor {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fafafa;
+  font-size: 13px;
+  line-height: 19px;
+  color: var(--ink-2);
+}
+.cp-floor b {
+  color: var(--ink);
+}
+.cp-floor__link {
+  flex: none;
+  font-weight: 600;
+}
+
+/* Who used a code */
+.cp-used-panel {
+  width: 380px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+}
+@media (max-width: 1100px) {
+  .cp-used-panel {
+    width: 100%;
+  }
+}
+.cp-up__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.cp-up__title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.cp-up__code {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.cp-up__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.cp-up__list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.cp-up__list li.is-void {
+  opacity: 0.6;
+}
+.cp-up__who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.cp-up__co {
+  font-weight: 600;
+  color: var(--ink);
+}
+.cp-up__amt {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.cp-up__none {
+  margin: 0;
+  padding: 16px;
+}
+.cp-up__foot {
+  margin: 0;
+  padding: 12px 16px;
+  font-size: 12px;
+}
+
+/* New / edit */
+.cp-form-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 1000px) {
+  .cp-form-wrap {
+    grid-template-columns: 1fr;
+  }
+}
+.cp-form {
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.cp-form__title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+.cp-fl {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.cp-fl .k {
+  font-size: 12px;
+}
+.cp-two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 600px) {
+  .cp-two {
+    grid-template-columns: 1fr;
+  }
+}
+.cp-coderow {
+  display: flex;
+  gap: 8px;
+}
+.cp-code-inp {
+  flex: 1 1 auto;
+  font-size: 15px;
+  letter-spacing: 0.08em;
+}
+.cp-code-inp[readonly] {
+  background: #fafafa;
+  color: var(--ink-2);
+}
+.cp-help {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.cp-help.is-good {
+  color: var(--good);
+}
+.cp-help.is-bad {
+  color: var(--bad);
+}
+.cp-set {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cp-set legend {
+  margin-bottom: 8px;
+}
+.cp-set .k {
+  font-size: 12px;
+}
+.cp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.cp-chips .chip {
+  min-height: 36px;
+  padding: 0 14px;
+}
+.cp-note {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f5f5f5;
+  font-size: 13px;
+  line-height: 19px;
+  color: var(--ink-2);
+}
+.cp-note svg {
+  flex: none;
+  margin-top: 2px;
+}
+.cp-form__foot {
+  display: flex;
+  gap: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.cp-pv {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #fafafa;
+}
+.cp-pv__row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.cp-pv__top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 14px;
+}
+.cp-pv__note {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.cp-pv__note.is-capped {
+  color: var(--accent-ink);
+}
+.cp-pv__foot {
+  font-size: 12px;
+  line-height: 18px;
+}

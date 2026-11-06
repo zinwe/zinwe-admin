@@ -1,27 +1,8 @@
 /**
- * SAMPLE-DATA SEAM (v1.3 UI day, FR-43) — Announcements extras the API does not serve yet (AdminAnnouncements board).
- * Real: the list, create / edit, type, where, audience (everyone / free / paid / chosen plans / chosen customers),
- * reach ("Reaches N customers right now"), button + link validation, special price, start–end, can be closed,
- * priority, on/off (End now), delete. Sample here:
- *
- *  - COUNTRIES: "By country" audience (no country targeting in the API; the option is shown but not selectable).
- *  - EMAIL_ANNOUNCEMENTS: "Also email it" (no email sending for announcements; the switch is shown but disabled).
- *  - Views · clicks: not counted by the API (the column says "Not counted yet").
- *  - SYSTEM_BARS / BAR_LADDER: the copy of the automatic plan / payment bars for "Preview as" and "Which bar wins".
- *    These mirror the dashboard's own bars; they are preview copy, not customer data.
- *
- * API day: add `countries`, `send_email`, `views` and `clicks` to the announcement, then trim this file to the
- * preview copy.
+ * Preview copy for User interactions (F-22) announcement bars: the dashboard's automatic plan / payment bars for
+ * "Preview as" and "Which bar wins", and the owner name in previews. These mirror the dashboard's own bars; they are
+ * preview copy, not customer data.
  */
-
-export const COUNTRIES: { code: string; label: string; n: number }[] = [
-  { code: "in", label: "India", n: 61 },
-  { code: "ae", label: "United Arab Emirates", n: 7 },
-  { code: "uk", label: "United Kingdom", n: 5 },
-  { code: "sg", label: "Singapore", n: 3 },
-];
-
-export const EMAIL_ANNOUNCEMENTS_AVAILABLE = false;
 
 export type PreviewAs = "normal" | "ended" | "ending" | "payment" | "full";
 
