@@ -695,15 +695,21 @@ function PlanCard({
           ) : null}
         </div>
       </div>
-      <div className="zp-grid2">
+      <div className="zp-grid2 zp-grid3">
         <label className="zp-fl" title="Set in the plan model; not editable here yet">
           PC limit
           <input className="inp num" type="number" value={p.max_devices} disabled readOnly />
         </label>
-        {extra ? (
-          <label className="zp-fl" title="Sample value until the plan model serves it (content/fixtures/pricing.ts)">
+        {p.history_days !== undefined || extra ? (
+          <label className="zp-fl" title="Days of alert, activity and work-log history the plan keeps (0 = no limit)">
             History, days
-            <input className="inp num" type="number" value={extra.historyDays} disabled readOnly />
+            <input className="inp num" type="number" value={p.history_days ?? extra?.historyDays} disabled readOnly />
+          </label>
+        ) : null}
+        {p.chat_history_days !== undefined || extra ? (
+          <label className="zp-fl" title="Days of team chat the plan keeps (0 = no limit). Older lines are hidden, then deleted 30 days later.">
+            Chat history, days
+            <input className="inp num" type="number" value={p.chat_history_days ?? extra?.chatHistoryDays} disabled readOnly />
           </label>
         ) : null}
       </div>
