@@ -77,6 +77,10 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
+/* v1.4: PC limit · History, days · Chat history, days on one row */
+.zp-grid2.zp-grid3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
 .zp-block {
   display: flex;
   flex-direction: column;

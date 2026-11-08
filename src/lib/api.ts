@@ -583,6 +583,10 @@ export interface PlanPricing {
   band_max_inr?: string | null;
   /** Whole-number discount % that keep the saved list price inside the band. */
   allowed_discounts?: number[];
+  /** Days of alert / activity history the plan keeps (0 = no limit). undefined = an older server. */
+  history_days?: number;
+  /** v1.4: days of team chat the plan keeps (0 = no limit). undefined = an older server. */
+  chat_history_days?: number;
 }
 
 export interface PricingOverview {

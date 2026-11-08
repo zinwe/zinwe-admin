@@ -4,6 +4,8 @@
  * Prices, PC limits, taglines, paying counts and offers come from the API (`admin/pricing/`, `admin/subscriptions/`,
  * `admin/announcements/`). These board fields have no API yet, so they are shown read-only from here:
  *  - `historyDays`: how many days of alert/activity history a plan keeps (board "History, days").
+ *  - `chatHistoryDays` (v1.4): how many days of team chat a plan keeps (board "Chat history, days"); used only when
+ *    the server doesn't send `chat_history_days` yet.
  *  - `points`: the three bullet points of each plan card in the Plans page preview (copied from the board;
  *    the real website keeps its own list in zinwe-frontend).
  *  - `PREVIEW_VISITOR_PCS`: the preview shows the page "for a visitor with 8 PCs".
@@ -12,17 +14,19 @@
  */
 export interface PlanExtra {
   historyDays: number;
+  chatHistoryDays: number;
   points: string[];
 }
 
 export const PLAN_EXTRAS: Record<string, PlanExtra> = {
   free: {
     historyDays: 7,
+    chatHistoryDays: 30,
     points: ["Every protection and team feature", "USB, file-transfer and remote-tool alerts", "Website blocking, work hours and chat"],
   },
-  startups: { historyDays: 90, points: ["Everything in Free", "PDF reports by email", "Email support"] },
-  teams: { historyDays: 180, points: ["Everything in Startups", "180 days of alert and activity history", "Email support"] },
-  businesses: { historyDays: 365, points: ["Everything in Teams", "1 year of history", "Priority support"] },
+  startups: { historyDays: 90, chatHistoryDays: 90, points: ["Everything in Free", "PDF reports by email", "Email support"] },
+  teams: { historyDays: 180, chatHistoryDays: 180, points: ["Everything in Startups", "180 days of alert and activity history", "Email support"] },
+  businesses: { historyDays: 365, chatHistoryDays: 365, points: ["Everything in Teams", "1 year of history", "Priority support"] },
 };
 
 export const CUSTOM_PLAN = {
