@@ -81,6 +81,11 @@
 .zp-grid2.zp-grid3 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
+/* v1.5: plus File sharing, max size (GB), editable: two by two, so Chat history and File sharing share a row.
+   Inputs line up at the bottom when a label wraps. */
+.zp-grid2.zp-limits {
+  align-items: end;
+}
 .zp-block {
   display: flex;
   flex-direction: column;

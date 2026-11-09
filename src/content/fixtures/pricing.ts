@@ -6,6 +6,8 @@
  *  - `historyDays`: how many days of alert/activity history a plan keeps (board "History, days").
  *  - `chatHistoryDays` (v1.4): how many days of team chat a plan keeps (board "Chat history, days"); used only when
  *    the server doesn't send `chat_history_days` yet.
+ *  - No sample for "File sharing, max size (GB)" (v1.5, `file_max_mb`): it is editable, so a server without the field
+ *    simply doesn't show it.
  *  - `points`: the three bullet points of each plan card in the Plans page preview (copied from the board;
  *    the real website keeps its own list in zinwe-frontend).
  *  - `PREVIEW_VISITOR_PCS`: the preview shows the page "for a visitor with 8 PCs".

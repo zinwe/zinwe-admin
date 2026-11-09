@@ -78,9 +78,11 @@ interface Fields {
   /** F-12 price band (India monthly, before GST): the final price must stay inside it. Empty = no limit. */
   bandMin: string;
   bandMax: string;
+  /** v1.5: the largest file to share in chat, in GB as typed (saved as `file_max_mb` = GB × 1024). Every plan, Free too. */
+  fileGb: string;
 }
 
-type FieldKey = "inrM" | "inrY" | "usdM" | "usdY" | "was" | "bandMin" | "bandMax";
+type FieldKey = "inrM" | "inrY" | "usdM" | "usdY" | "was" | "bandMin" | "bandMax" | "fileGb";
 
 const FIELD_LABEL: Record<FieldKey, string> = {
   inrM: "India monthly",
@@ -90,11 +92,32 @@ const FIELD_LABEL: Record<FieldKey, string> = {
   was: "Was price",
   bandMin: "Lowest price",
   bandMax: "Highest price",
+  fileGb: "File sharing, max size",
 };
-const FIELD_KEYS: FieldKey[] = ["inrM", "inrY", "usdM", "usdY", "was", "bandMin", "bandMax"];
+const FIELD_KEYS: FieldKey[] = ["inrM", "inrY", "usdM", "usdY", "was", "bandMin", "bandMax", "fileGb"];
 
 /** The server serves price bands (v1.3.3). An older one doesn't: the band fields stay hidden and aren't sent. */
 const hasBand = (p: PlanPricing) => p.band_min_inr !== undefined || p.band_max_inr !== undefined;
+
+/** The server serves the file size limit (v1.5). An older one doesn't: the field stays hidden and isn't sent. */
+const hasFileMax = (p: PlanPricing) => typeof p.file_max_mb === "number";
+
+/** The fields a plan can change here: the free plan has no price, only the file size limit. */
+const keysOf = (p: PlanPricing): FieldKey[] => (p.is_free ? (hasFileMax(p) ? ["fileGb"] : []) : FIELD_KEYS);
+
+/** 2048 MB -> "2", 1536 -> "1.5" (GB, at most 2 decimals). */
+const gbOf = (mb: number) => String(Math.round((mb / 1024) * 100) / 100);
+
+/** "2" GB -> 2048 MB. */
+const mbOf = (gb: string) => Math.round(num(gb) * 1024);
+
+/** The file size field's problem when it was changed, else "". */
+function fileError(saved: Fields, f: Fields): string {
+  if (shown(f, "fileGb") === shown(saved, "fileGb")) return "";
+  if (!f.fileGb.trim()) return "File sharing: enter the largest file size in GB.";
+  if (!(num(f.fileGb) > 0) || mbOf(f.fileGb) < 1) return "File sharing: the largest file size is a number of GB above 0, like 1 or 2.5.";
+  return "";
+}
 
 /** Whole-percent discounts (0–90) off `list` that keep the price inside the band. */
 function allowedPcts(list: number, min: number, max: number): number[] {
@@ -136,6 +159,7 @@ function fieldsOf(p: PlanPricing): Fields {
     usdYAuto: !usd.yearly.custom,
     bandMin: p.band_min_inr ? strip(p.band_min_inr) : "",
     bandMax: p.band_max_inr ? strip(p.band_max_inr) : "",
+    fileGb: hasFileMax(p) ? gbOf(p.file_max_mb as number) : "",
   };
 }
 
@@ -149,11 +173,14 @@ function shown(f: Fields, k: FieldKey): string {
     const m = num(f.usdM);
     return m > 0 ? String(Math.round(m * 12 * 100) / 100) : f.usdY;
   }
+  // "2.0" and "2" are the same size.
+  if (k === "fileGb") return num(f.fileGb) >= 0 ? String(num(f.fileGb)) : f.fileGb.trim();
   return f[k].trim();
 }
 
 function fmtField(k: FieldKey, v: string): string {
   const t = v.trim();
+  if (k === "fileGb") return t ? `${t} GB` : "none";
   if (k === "was" || k === "bandMin" || k === "bandMax") return t ? money(num(t), "INR") : "none";
   if (!t) return "none";
   return k === "usdM" || k === "usdY" ? money(num(t), "USD") : money(num(t), "INR");
@@ -216,6 +243,9 @@ function planError(f: Fields, usdSold: boolean): string {
 function bodyFor(p: PlanPricing, saved: Fields, draft: Fields): PricingPatch {
   const body: PricingPatch = {};
   const changed = (k: FieldKey) => shown(draft, k) !== shown(saved, k);
+  if (hasFileMax(p) && changed("fileGb")) body.file_max_mb = mbOf(draft.fileGb);
+  // The free plan has no price or band: only the file size limit is sent for it.
+  if (p.is_free) return body;
   if (hasBand(p) && (changed("bandMin") || changed("bandMax"))) {
     body.band_min_inr = draft.bandMin.trim() ? String(num(draft.bandMin)) : null;
     body.band_max_inr = draft.bandMax.trim() ? String(num(draft.bandMax)) : null;
@@ -252,13 +282,16 @@ function bodyFor(p: PlanPricing, saved: Fields, draft: Fields): PricingPatch {
 
 /** The body that puts a plan back to how it was (for Undo). */
 function restoreBody(p: PlanPricing): PricingPatch {
-  const r = (c: PricingCurrency): RegionPriceInput => ({
+  const file = hasFileMax(p) ? { file_max_mb: p.file_max_mb } : {};
+  // The server refuses prices and a band on the free plan.
+  if (p.is_free) return file;
+  const r =(c: PricingCurrency): RegionPriceInput => ({
     list_monthly: p.regions[c].monthly.list,
     discount_percent: p.regions[c].monthly.discount_percent,
     yearly_price: p.regions[c].yearly.custom ? p.regions[c].yearly.price : null,
   });
   const band = hasBand(p) ? { band_min_inr: p.band_min_inr ?? null, band_max_inr: p.band_max_inr ?? null } : {};
-  return { ...band, INR: r("INR"), USD: r("USD") };
+  return { ...band, ...file, INR: r("INR"), USD: r("USD") };
 }
 
 interface Change {
@@ -313,14 +346,17 @@ export function PricingPage(): ReactElement {
   const paid = plans.filter((p) => !p.is_free);
   const usdSold = (p: PlanPricing) => Number(p.regions.USD.monthly.list) > 0;
   const errors = Object.fromEntries(paid.map((p) => [p.code, draft[p.code] ? planError(draft[p.code], usdSold(p)) : ""]));
-  const hasErrors = Object.values(errors).some(Boolean);
+  const fileErrors = Object.fromEntries(
+    plans.map((p) => [p.code, hasFileMax(p) && draft[p.code] && saved[p.code] ? fileError(saved[p.code], draft[p.code]) : ""]),
+  );
+  const hasErrors = Object.values(errors).some(Boolean) || Object.values(fileErrors).some(Boolean);
 
   const changes: Change[] = [];
-  for (const p of paid) {
+  for (const p of plans) {
     const d = draft[p.code];
     const s = saved[p.code];
     if (!d || !s) continue;
-    for (const k of FIELD_KEYS) {
+    for (const k of keysOf(p)) {
       const a = shown(s, k);
       const b = shown(d, k);
       if (a === b) continue;
@@ -329,7 +365,9 @@ export function PricingPage(): ReactElement {
     }
   }
   const bigChanges = changes.filter((c) => c.big);
-  const dirtyPlans = paid.filter((p) => draft[p.code] && FIELD_KEYS.some((k) => shown(draft[p.code], k) !== shown(saved[p.code], k)));
+  const dirtyPlans = plans.filter((p) => draft[p.code] && keysOf(p).some((k) => shown(draft[p.code], k) !== shown(saved[p.code], k)));
+  // Only the file size limit changed: the toasts don't talk about prices.
+  const pricesChanged = changes.some((c) => c.field !== FIELD_LABEL.fileGb);
 
   const setF = (code: string, k: FieldKey, v: string) =>
     setDraft((cur) => {
@@ -359,7 +397,7 @@ export function PricingPage(): ReactElement {
     try {
       for (const p of dirtyPlans) {
         const body = bodyFor(p, saved[p.code], draft[p.code]);
-        if (!body.INR && !body.USD && body.band_min_inr === undefined) continue;
+        if (!body.INR && !body.USD && body.band_min_inr === undefined && body.file_max_mb === undefined) continue;
         const next = await updatePricing(p.code, body);
         before.push(p);
         after.set(p.code, next);
@@ -389,14 +427,14 @@ export function PricingPage(): ReactElement {
         " by you",
     );
     say(
-      `Saved ${n} ${n === 1 ? "change" : "changes"}. New payments use the new prices from now.`,
+      `Saved ${n} ${n === 1 ? "change" : "changes"}.${pricesChanged ? " New payments use the new prices from now." : ""}`,
       async () => {
         window.clearTimeout(toastTimer.current);
         try {
           const restored = new Map<string, PlanPricing>();
           for (const p of before) restored.set(p.code, await updatePricing(p.code, restoreBody(p)));
           setData({ ...data, plans: data.plans.map((p) => restored.get(p.code) ?? after.get(p.code) ?? p) } as PricingOverview);
-          say("Undone. The Plans page and checkout are back to the old prices.", undefined, 4000);
+          say(pricesChanged ? "Undone. The Plans page and checkout are back to the old prices." : "Undone.", undefined, 4000);
         } catch (e) {
           say(e instanceof Error ? `Couldn’t undo: ${e.message}` : "Couldn’t undo.", undefined, 6000);
           reload();
@@ -491,6 +529,7 @@ export function PricingPage(): ReactElement {
                     saved={saved[p.code]}
                     draft={draft[p.code]}
                     error={errors[p.code] ?? ""}
+                    fileError={fileErrors[p.code] ?? ""}
                     gstRate={gstRate}
                     onField={(k, v) => setF(p.code, k, v)}
                     onDiscount={(pct) => setDiscount(p.code, pct)}
@@ -622,6 +661,7 @@ function PlanCard({
   saved,
   draft: d,
   error: err,
+  fileError: fileErr,
   gstRate,
   onField,
   onDiscount,
@@ -632,6 +672,7 @@ function PlanCard({
   saved: Fields;
   draft: Fields;
   error: string;
+  fileError: string;
   gstRate: number;
   onField: (k: FieldKey, v: string) => void;
   onDiscount: (pct: number) => void;
@@ -695,7 +736,7 @@ function PlanCard({
           ) : null}
         </div>
       </div>
-      <div className="zp-grid2 zp-grid3">
+      <div className={hasFileMax(p) ? "zp-grid2 zp-limits" : "zp-grid2 zp-grid3"}>
         <label className="zp-fl" title="Set in the plan model; not editable here yet">
           PC limit
           <input className="inp num" type="number" value={p.max_devices} disabled readOnly />
@@ -712,7 +753,24 @@ function PlanCard({
             <input className="inp num" type="number" value={p.chat_history_days ?? extra?.chatHistoryDays} disabled readOnly />
           </label>
         ) : null}
+        {hasFileMax(p) ? (
+          <label className="zp-fl" title="The largest file a person can share in chat on this plan. Files stay on the sender's PC or browser.">
+            File sharing, max size (GB)
+            <input
+              className={cls("fileGb", Boolean(fileErr))}
+              inputMode="decimal"
+              aria-label={`${p.name} file sharing, max size in GB`}
+              value={d.fileGb}
+              onChange={(e) => onField("fileGb", e.target.value)}
+            />
+          </label>
+        ) : null}
       </div>
+      {fileErr ? (
+        <p role="alert" className="zp-err">
+          {fileErr}
+        </p>
+      ) : null}
 
       {p.is_free ? (
         <div className="zp-block zp-free" style={{ gap: 8 }}>
