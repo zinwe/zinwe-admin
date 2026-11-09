@@ -587,6 +587,11 @@ export interface PlanPricing {
   history_days?: number;
   /** v1.4: days of team chat the plan keeps (0 = no limit). undefined = an older server. */
   chat_history_days?: number;
+  /**
+   * v1.5: the largest file a member can share in chat on this plan, in MB (the admin types GB; 1 GB = 1024 MB).
+   * undefined = an older server: the field is not shown and never sent.
+   */
+  file_max_mb?: number;
 }
 
 export interface PricingOverview {
@@ -604,11 +609,13 @@ export interface RegionPriceInput {
 
 export const getPricing = () => request<PricingOverview>("/api/admin/pricing/");
 
-/** PATCH body: changed regions, the price band (null clears a side) and the recommended flag. */
+/** PATCH body: changed regions, the price band (null clears a side), the recommended flag and the file size limit. */
 export type PricingPatch = Partial<Record<PricingCurrency, RegionPriceInput>> & {
   is_recommended?: boolean;
   band_min_inr?: string | null;
   band_max_inr?: string | null;
+  /** v1.5: the largest file to share in chat, in MB. The only field the free plan accepts besides is_recommended. */
+  file_max_mb?: number;
 };
 
 /** A discount that takes the price out of its band answers 400 {"discount_percent": ["Puts the price at ₹X, outside ₹A–₹B."]}. */
