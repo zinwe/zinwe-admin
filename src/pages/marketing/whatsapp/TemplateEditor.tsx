@@ -9,7 +9,7 @@ import { useToast } from "../../../components/Toast";
 import { ApiError } from "../../../lib/api";
 import { getCoupons, type Coupon } from "../../../lib/couponsApi";
 import {
-  addWaTag, addWaVersion, removeWaMedia, saveWaTemplate, uploadWaMedia, type WaKind, type WaTag, type WaTemplate, type WaTrack,
+  addWaTag, addWaVersion, patchWaTemplate, removeWaMedia, saveWaTemplate, uploadWaMedia, type WaKind, type WaTag, type WaTemplate, type WaTrack,
 } from "../../../lib/whatsappApi";
 import { CATEGORIES, CATEGORY_LABEL, CATEGORY_TYPES, errText, MediaPicker, TRACK_LABEL, TRACKED, TRACKS } from "./shared";
 import {
@@ -65,10 +65,12 @@ export function TemplateEditor({ target, lang, people, picks, who, setWho, tags,
   const toast = useToast();
   const source = target.t;
   const isB = !!target.versionB && !!source;
+  /** A version B already runs (a draft one, say): edit its words instead of starting another. */
+  const runningB = isB ? source?.version_b ?? null : null;
   const isNew = !source;
   const [d, setD] = useState<WaTemplate>(() => source ?? blank(target.cat));
   const [blocks, setBlocks] = useState<Record<L, Block[]>>(() => (source
-    ? { en: parseBlocks(source.text ?? ""), hi: parseBlocks(source.text_hi ?? "") }
+    ? { en: parseBlocks(runningB ? runningB.text : source.text ?? ""), hi: parseBlocks(runningB ? runningB.text_hi : source.text_hi ?? "") }
     : { en: greeting("en"), hi: greeting("hi") }));
   const [tagIds, setTagIds] = useState<number[]>(() => (source?.tags ?? []).map((g) => g.id));
   const [edLang, setEdLang] = useState<L>(lang === "hi" ? "hi" : "en");
@@ -181,9 +183,15 @@ export function TemplateEditor({ target, lang, people, picks, who, setWho, tags,
   const save = async () => {
     setBusy(true);
     try {
+      if (runningB && source) {
+        await patchWaTemplate(runningB.id, { text: texts.en, text_hi: texts.hi });
+        toast(isDraftNow ? "Version B saved. It is sent once both languages are written." : "Version B saved. Sends now split 50/50 with A.");
+        onSaved(source.id as number);
+        return;
+      }
       if (isB && source) {
         await addWaVersion(source.id as number, texts.en, texts.hi);
-        toast("Version B saved. Sends now split 50/50 with A.");
+        toast(isDraftNow ? "Version B saved. It is sent once both languages are written." : "Version B saved. Sends now split 50/50 with A.");
         onSaved(source.id as number);
         return;
       }

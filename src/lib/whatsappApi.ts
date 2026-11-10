@@ -197,10 +197,26 @@ export interface WaTemplate {
 export interface WaTag {
   id: number;
   name: string;
+  /** One of the server's palette: #24508f #f26a0a #17663f #c0331c #7a4fb5 #0f766e #9c5b2e #54656f. */
   color: string;
+  /** GET /tags/ only: how many templates carry it. */
+  templates?: number;
 }
 
-/** Sends and replies over the last 30 days; rates are whole percents. _en / _hi: by the language it went out in. */
+/** POST /templates/preview/: exactly what a draft would read for this contact. missing_* = details used outside any
+ * If that the contact doesn't have. */
+export interface WaPreview {
+  contact: number;
+  known: Record<"FirstName" | "OwnerName" | "Business" | "City" | "HowWeKnow", boolean>;
+  text: string;
+  text_hi: string;
+  missing_en: string[];
+  missing_hi: string[];
+}
+
+/** Sends and replies over the last 30 days; rates are whole percents, 0 (not null) when nothing was sent, so `sends`
+ * decides "not sent yet". _en / _hi: by the language it went out in. `next`: YES (Outreach), paid (Offer), Track set
+ * (Engage), a later path step (Demo video, Setup, Demo call), a testimonial (Testimonial). */
 export interface WaNumbers {
   sends: number;
   replies: number;
@@ -353,9 +369,11 @@ export const getWaTemplates = () => request<WaTemplate[]>(`${BASE}/templates/`);
 export const saveWaTemplate = (t: WaTemplate) =>
   t.id ? request<WaTemplate>(`${BASE}/templates/${t.id}/`, { method: "PUT", body: JSON.stringify(t) }) : request<WaTemplate>(`${BASE}/templates/`, post(t));
 export const deleteWaTemplate = (id: number) => request<null>(`${BASE}/templates/${id}/`, { method: "DELETE" });
-/** Starts an A/B test: version B with these texts (one B at a time). */
+/** Starts an A/B test: version B with these texts (one B at a time). Returns A's JSON with version_b. Edit B later with
+ * patchWaTemplate(version_b.id, {text, text_hi}). */
 export const addWaVersion = (id: number, text: string, text_hi: string) => request<WaTemplate>(`${BASE}/templates/${id}/versions/`, post({ text, text_hi }));
-/** Ends the test: B copies B's texts into A and archives B; A archives B. Both keep their history. */
+/** Ends the test: B copies B's texts into A and archives B; A archives B. Both keep their history. Keep B is refused
+ * while B is a draft. */
 export const keepWaVersion = (id: number, version: "A" | "B") => request<WaTemplate>(`${BASE}/templates/${id}/keep/`, post({ version }));
 /** A copy named "<name> (copy)" with the same texts, category, step and tags. */
 export const duplicateWaTemplate = (id: number) => request<WaTemplate>(`${BASE}/templates/${id}/duplicate/`, { method: "POST" });
@@ -364,7 +382,10 @@ export const patchWaTemplate = (id: number, patch: Partial<WaTemplate>) => reque
 export const getWaReach = () => request<WaReach>(`${BASE}/templates/reach/`);
 export const getWaTags = () => request<WaTag[]>(`${BASE}/tags/`);
 export const addWaTag = (name: string) => request<WaTag>(`${BASE}/tags/`, post({ name }));
+export const patchWaTag = (id: number, patch: Partial<Pick<WaTag, "name" | "color">>) => request<WaTag>(`${BASE}/tags/${id}/`, { method: "PATCH", body: JSON.stringify(patch) });
+/** Takes the tag off every template; the templates stay. */
 export const deleteWaTag = (id: number) => request<null>(`${BASE}/tags/${id}/`, { method: "DELETE" });
+export const previewWaTemplate = (contact: number, text: string, text_hi: string) => request<WaPreview>(`${BASE}/templates/preview/`, post({ contact, text, text_hi }));
 export const uploadWaMedia = (id: number, file: File) => {
   const body = new FormData();
   body.append("file", file);

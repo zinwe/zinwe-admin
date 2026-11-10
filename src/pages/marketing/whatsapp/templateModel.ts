@@ -28,7 +28,7 @@ export const SUB: Record<Cat, string> = {
 };
 /** The step each category is for: the second bar on a card. */
 export const NEXT: Partial<Record<Cat, string>> = {
-  outreach: "said YES", offer: "said YES", engage: "Track set", demo_video: "took the next step", setup: "took the next step",
+  outreach: "said YES", offer: "paid", engage: "Track set", demo_video: "took the next step", setup: "took the next step",
   demo_call: "took the next step", testimonial: "gave one",
 };
 /** The two letters on a card's badge. */

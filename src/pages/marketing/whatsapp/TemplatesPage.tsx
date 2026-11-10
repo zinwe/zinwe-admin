@@ -89,10 +89,12 @@ function TemplateCard({ t, lang, who, reach, tagsById, ver, setVer, menuOpen, to
   const weak = !b && !quick && sent >= 30 && rate < 15;
   const a = n.a;
   const bn = n.b;
-  const canKeep = !!a && !!bn && a.sends >= 50 && bn.sends >= 50;
+  // A B still missing a language is never sent (everyone gets A meanwhile), and Keep B is refused.
+  const bDraft = !!b && (b.draft ?? !(isWritten(b.text) && isWritten(b.text_hi)));
+  const canKeep = !!a && !!bn && !bDraft && a.sends >= 50 && bn.sends >= 50;
   const bWins = !!a && !!bn && bn.rate > a.rate;
   const abLine = a && bn
-    ? (canKeep
+    ? bDraft ? "Version B is a draft: everyone gets A until both its languages are written." : (canKeep
       ? (bWins ? `B wins after 50 sends each: ${bn.rate} % vs ${a.rate} %.` : `A holds after 50 sends each: ${a.rate} % vs ${bn.rate} %.`)
       : `Sends split 50/50 until each version has 50. ${bn.sends ? `A ${a.rate} %, B ${bn.rate} % so far.` : "B has no sends yet."}`)
     : "";
@@ -149,7 +151,7 @@ function TemplateCard({ t, lang, who, reach, tagsById, ver, setVer, menuOpen, to
         <div className="wc-strip is-weak"><span>Weak: {rate} % replies after {sent} sent. Test a second version against it.</span><button type="button" className="wt-btn" onClick={onTryB}>Try a new version</button></div>
       ) : null}
       {a && bn ? (
-        <div className="wc-strip is-ab"><span>{abLine}</span>{canKeep ? <button type="button" className="wt-btn is-dark" onClick={() => onKeep(bWins ? "B" : "A")}>{bWins ? "Keep B" : "Keep A"}</button> : null}</div>
+        <div className="wc-strip is-ab"><span>{abLine}</span>{bDraft ? <button type="button" className="wt-btn" onClick={onTryB}>Write version B</button> : null}{canKeep ? <button type="button" className="wt-btn is-dark" onClick={() => onKeep(bWins ? "B" : "A")}>{bWins ? "Keep B" : "Keep A"}</button> : null}</div>
       ) : null}
       <dl className="wc-facts">
         <div><dt>Category</dt><dd>{CATEGORY_LABEL[cat]} · {t.type_name || "No type yet"}</dd></div>
@@ -450,7 +452,7 @@ export function TemplatesPage({ templates, contacts, reload, lang, newTick, olde
             })}
           </div>
         ) : <div className="wt-empty">{needle ? "No template matches that search." : "No templates here yet. Pick another category or tag, or make a new one."}</div>}
-        <div className="wt-foot">Replies = replies ÷ sent, last 30 days. The second bar is the step each category is for: YES for Outreach and Offer, Track set for Engage, Next step for Demo video, Setup and Demo call, Got one for Testimonial. Quick replies answer a message, so they are not scored. The chips beside each category and tag use the same reply rate: green 40 % and up, orange 15–39 %, red under 15 %.</div>
+        <div className="wt-foot">Replies = replies ÷ sent, last 30 days. The second bar is the step each category is for: YES for Outreach, Paid for Offer, Track set for Engage, Next step for Demo video, Setup and Demo call, Got one for Testimonial. Quick replies answer a message, so they are not scored. The chips beside each category and tag use the same reply rate: green 40 % and up, orange 15–39 %, red under 15 %.</div>
       </>
     );
   }
