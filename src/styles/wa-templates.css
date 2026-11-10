@@ -103,7 +103,7 @@ button.wt-sel:hover { border-color: var(--ink); }
 .wc-strip.is-weak { background: var(--danger-tint); color: var(--danger-ink); }
 .wc-strip.is-ab { background: var(--surface-2); color: var(--ink-2); }
 .wc-strip .wt-btn { min-height: 30px; flex: none; }
-.wc-facts { margin: 0; padding: 12px 16px 4px; display: flex; flex-direction: column; gap: 7px; }
+.wt-wrap dl.wc-facts { margin: 0; padding: 12px 16px 4px; display: flex; flex-direction: column; gap: 7px; }
 .wc-facts > div { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 10px; align-items: baseline; }
 .wc-facts dt { font-size: 12px; color: var(--ink-3); }
 .wc-facts dd { margin: 0; font-size: 13px; color: var(--ink); display: flex; flex-wrap: wrap; gap: 4px; align-items: center; min-width: 0; }
@@ -154,7 +154,7 @@ button.wt-sel:hover { border-color: var(--ink); }
 .wt-blockh select { min-height: 30px; padding: 0 8px; border: 1px solid var(--accent-line); border-radius: 8px; background: var(--surface); font-size: 13px; font-weight: 600; color: var(--accent-text); }
 .wt-blockh .wt-x { margin-left: auto; border: 0; background: transparent; color: var(--ink-3); font-size: 12px; font-weight: 600; }
 .wt-blockh .wt-x:hover { color: var(--danger); }
-.wt-block textarea { width: 100%; min-height: 64px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; line-height: 20px; resize: vertical; color: var(--ink); background: var(--surface); }
+.wt-block textarea { width: 100%; min-height: 64px; field-sizing: content; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; line-height: 20px; resize: vertical; color: var(--ink); background: var(--surface); }
 .wt-block textarea:focus { outline: 2px solid var(--focus); outline-offset: 0; border-color: var(--focus); }
 .wt-branch { display: grid; grid-template-columns: 86px minmax(0, 1fr); gap: 8px; align-items: start; }
 .wt-branch span { padding-top: 9px; font-size: 12px; font-weight: 600; color: var(--accent-text); }
@@ -165,7 +165,7 @@ button.wt-sel:hover { border-color: var(--ink); }
 .wt-var:hover { border-color: var(--ink); }
 .wt-tagsed { gap: 6px; }
 .wt-tagsed .wt-tag button { border: 0; background: transparent; color: var(--ink-3); padding: 0 0 0 2px; }
-.wt-tagsed input { height: 28px; width: 130px; padding: 0 10px; border: 1px dashed #b5b5b5; border-radius: 999px; font-size: 12px; background: var(--surface); }
+.wt-f .wt-tagsed input { min-height: 28px; height: 28px; width: 130px; flex: none; padding: 0 10px; border: 1px dashed #b5b5b5; border-radius: 999px; font-size: 12px; background: var(--surface); }
 .wt-errs { margin: 0; color: var(--danger); font-size: 13px; }
 .wt-phone { border-radius: 16px; overflow: hidden; border: 1px solid var(--line); background: #efeae2; }
 .wt-phonebar { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #f0f2f5; border-bottom: 1px solid var(--line); }
@@ -208,6 +208,7 @@ button.wt-sel:hover { border-color: var(--ink); }
   .wt-edl, .wt-edr { padding-left: 14px; padding-right: 14px; }
   .wt-grid2 { grid-template-columns: minmax(0, 1fr); }
   .wc-prog { margin-left: 0; }
+  .wt-tools { justify-content: flex-start; }
   .wc-facts > div { grid-template-columns: 92px minmax(0, 1fr); }
   .wt-branch { grid-template-columns: minmax(0, 1fr); gap: 4px; }
   .wt-branch span { padding-top: 0; }
