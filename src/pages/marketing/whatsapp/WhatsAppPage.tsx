@@ -48,7 +48,7 @@ export function WhatsAppPage(): ReactElement {
     else if (tab === "templates") body = <TemplatesTab templates={templates} reload={reload} />;
     else if (tab === "analytics" && analytics) body = <AnalyticsTab data={analytics} />;
     else if (tab === "settings") body = <SettingsTab />;
-    else body = <TodayTab data={today} contacts={contacts} reload={reload} />;
+    else body = <TodayTab data={today} contacts={contacts} templates={templates} reload={reload} />;
   }
   const count = data ? data[0].queue.length + data[0].replies.length : 0;
   return (

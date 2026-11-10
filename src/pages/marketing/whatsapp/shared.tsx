@@ -1,7 +1,10 @@
 import { useEffect, useState, type ReactElement, type ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 import { ApiError } from "../../../lib/api";
-import { fetchWaMedia, type WaContact, type WaKind, type WaLanguage, type WaMedia, type WaParts, type WaStatus, type WaTrack } from "../../../lib/whatsappApi";
+import {
+  fetchWaMedia, type WaCampaignStatus, type WaCategory, type WaContact, type WaKind, type WaLanguage, type WaMedia, type WaParts, type WaStatus,
+  type WaTestimonial, type WaTrack,
+} from "../../../lib/whatsappApi";
 
 export const LANG_LABEL: Record<WaLanguage, string> = { en: "English", hi: "Hinglish" };
 
@@ -13,7 +16,53 @@ export const KIND_LABEL: Record<WaKind, string> = {
   first: "First message", followup: "Follow-up", touch3: "No reply: polite close", touch4: "No reply: extra message",
   interested: "Reply: interested", question: "Reply: question", notnow: "Reply: not now", nurture: "After YES",
 };
-export const TRACK_LABEL: Record<WaTrack, string> = { "": "Every YES", data: "Data safety", day: "Team's day", chat: "Team chat" };
+/** On older after-YES templates "" = every YES; on a contact it is Unassigned (UNASSIGNED). */
+export const TRACK_LABEL: Record<WaTrack, string> = { "": "Every YES", privacy: "Data Privacy", activity: "Team Activity Monitoring", both: "Both Pack" };
+export const TRACKS: Exclude<WaTrack, "">[] = ["privacy", "activity", "both"];
+export const trackName = (t: WaTrack | undefined): string => (t ? TRACK_LABEL[t] : "Unassigned");
+
+/** The 90-day campaign (100 Reviews): categories in the order a contact meets them, and each one's types. */
+export const CATEGORY_LABEL: Record<Exclude<WaCategory, "">, string> = {
+  outreach: "Outreach", engage: "Engage", demo_video: "Demo video", setup: "Setup", demo_call: "Demo call",
+  offer: "Offer & discount", testimonial: "Testimonial", quick_reply: "Quick reply",
+};
+export const CATEGORIES = Object.keys(CATEGORY_LABEL) as Exclude<WaCategory, "">[];
+export const TRACKED: WaCategory[] = ["engage", "demo_video"];
+export const CATEGORY_TYPES: Record<Exclude<WaCategory, "">, string[]> = {
+  outreach: ["Intro", "Problem", "Value", "Question", "Season or event", "Offer", "Discount"],
+  engage: ["Need discovery", "Qualification question", "Track confirmation"],
+  demo_video: ["Overview video", "Feature clip", "Recap and next step"],
+  setup: ["Registration steps", "Incomplete-setup nudge"],
+  demo_call: ["Booking link", "Reminder", "After the call"],
+  offer: ["Startup pack", "Team pack", "Any pack (event)", "Team pack (event)"],
+  testimonial: ["Written request", "Video request"],
+  quick_reply: ["STOP / band karo", "Price question", "Is this spyware?", "Not now", "We already use something", "Send it on email", "Where did you get my number?"],
+};
+export const CATEGORY_HELP: Record<Exclude<WaCategory, "">, string> = {
+  outreach: "Cold messages on days 1–90, no Track. A reply moves the contact to Replied.",
+  engage: "After their YES: questions to find what they want. Their answer sets the contact’s Track.",
+  demo_video: "After the Track is set: that Track’s 6 videos, one a day.",
+  setup: "After the demo: the registration steps, then a nudge if no PC is connected 3 days later.",
+  demo_call: "Only when setup hits an error, and only for existing businesses.",
+  offer: "The stage’s code for their pack. One code per business, first month only, 40% at most. Festival codes are picked by hand.",
+  testimonial: "14 days after their first PC, paid or free: written first, then video if they are happy to.",
+  quick_reply: "Answers to a message (a question, an objection, STOP), any time. Never moves the path.",
+};
+export const CAMPAIGN_STATUS: Record<WaCampaignStatus, [string, string]> = {
+  "": ["Not started", ""], messaged: ["Messaged", ""], replied: ["Replied", "warn"], yes: ["YES", "good"], engaged: ["Engaged", "good"],
+  track_assigned: ["Track assigned", "good"], demo_video_sent: ["Demo video sent", "good"], setup: ["Setup", "good"],
+  demo_call: ["Demo call", "good"], offer: ["Offer", "good"], paid: ["Paid", "good"], no_reply: ["No reply", ""], opted_out: ["Opted out", "bad"],
+};
+export const CampaignPill = ({ s }: { s: WaCampaignStatus | undefined }): ReactElement => <span className={"pill " + CAMPAIGN_STATUS[s ?? ""][1]}>{CAMPAIGN_STATUS[s ?? ""][0]}</span>;
+export const TESTIMONIAL_LABEL: Record<WaTestimonial, string> = { "": "Not asked yet", written_asked: "Written: asked", written: "Written: got it", video_asked: "Video: asked", video: "Video: got it" };
+/** The Track an Engage answer points to, as the backend suggests it (wa_flow.suggest_track); staff decide. */
+export function suggestTrack(text: string): WaTrack {
+  const t = text.toLowerCase();
+  if (/\b(both|dono|donon)\b/.test(t)) return "both";
+  const privacy = /file|data|pen ?drive|usb|access|client|laptop|cop(y|ies)|leak|secur|safe|password/.test(t);
+  const activity = /\bteam|staff|who (is|does|works)|\bday\b|activity|monitor|productiv|kaam|\bdin\b|attendance|hours|working/.test(t);
+  return privacy && !activity ? "privacy" : activity && !privacy ? "activity" : "";
+}
 /** Fills the placeholders with a sample business, for previews. `first` = "" shows the no-name greeting:
  * "Hello Gupta Exim team" (as wa_names.py does when we don't know a real first name). */
 export const sampleText = (t: string, firm = "Gupta Exim", first = "Rakesh", lang: WaLanguage = "en"): string =>

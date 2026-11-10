@@ -6,12 +6,19 @@ const BASE = "/api/admin/marketing/wa";
 
 export type WaStatus = "ready" | "messaged" | "replied" | "interested" | "signed" | "notnow" | "stop";
 export type WaKind = "first" | "followup" | "touch3" | "touch4" | "interested" | "question" | "notnow" | "nurture";
-export type WaMessageKind = "first" | "followup" | "touch" | "nurture" | "custom" | "reply" | "theirs";
-/** The after-YES sequence a contact is on ("" = only the messages every YES gets). */
-export type WaTrack = "" | "data" | "day" | "chat";
+export type WaMessageKind = "first" | "followup" | "touch" | "nurture" | "flow" | "custom" | "reply" | "theirs";
+/** What the contact wants (100 Reviews campaign): "" = Unassigned. Set by staff from the Engage answer. On an older
+ * after-YES template "" = every YES. */
+export type WaTrack = "" | "privacy" | "activity" | "both";
+/** The 90-day campaign's message categories; "" = an older template. Only Engage and Demo video carry a Track. */
+export type WaCategory = "" | "outreach" | "engage" | "demo_video" | "setup" | "demo_call" | "offer" | "testimonial" | "quick_reply";
+/** How far a contact got along the campaign path ("" = not started). */
+export type WaCampaignStatus = "" | "messaged" | "replied" | "yes" | "engaged" | "track_assigned" | "demo_video_sent" | "setup" | "demo_call" | "offer" | "paid" | "no_reply" | "opted_out";
+export type WaPack = "" | "startup" | "team";
+export type WaTestimonial = "" | "written_asked" | "written" | "video_asked" | "video";
 /** What a person can mark as sent: a step of the sequence, or a reply. */
 /** custom = a one-off from Contacts → Send WhatsApp: it never moves the sequence. */
-export type WaSendKind = "first" | "followup" | "touch3" | "touch4" | "nurture" | "reply" | "custom";
+export type WaSendKind = "first" | "followup" | "touch3" | "touch4" | "nurture" | "reply" | "custom" | "flow";
 export type WaGoal = "Conversations" | "Free signups" | "Installs" | "Paid plans";
 
 export interface WaMessage {
@@ -20,6 +27,9 @@ export interface WaMessage {
   text: string;
   at: string;
   by: string;
+  /** The campaign template it came from, and its label ("Engage · Need discovery · Data Privacy · step 1"). */
+  template?: number | null;
+  label?: string;
 }
 
 export interface WaContact {
@@ -54,6 +64,23 @@ export interface WaContact {
   /** The business name without SEO words, legal suffixes or fancy letters. */
   short_name: string;
   messages?: WaMessage[];
+  /** The 90-day campaign (100 Reviews). */
+  campaign_status?: WaCampaignStatus;
+  /** Day 1-90 from their first message (0 = not started) and its stage 1-3. */
+  day?: number;
+  stage?: number;
+  /** The campaign's plan: "ninety" = the 90-day campaign. */
+  plan?: "" | "touches" | "ninety";
+  out_day?: number;
+  engage_step?: number;
+  demo_step?: number;
+  setup_step?: number;
+  demo_call_sent?: boolean;
+  offer_sent?: string | null;
+  setup_error?: boolean;
+  using_since?: string | null;
+  pack?: WaPack;
+  testimonial?: WaTestimonial;
 }
 
 export interface WaStats {
@@ -89,6 +116,8 @@ export interface WaCampaign {
   touch4_days: number;
   /** Cold messages in English, Hinglish, or ab = half and half, to compare in Analytics. */
   language?: WaLanguage | "ab";
+  /** ninety = the 90-day campaign: Outreach templates by day, then the YES path by Track. */
+  plan?: "touches" | "ninety";
   stats?: WaStats;
 }
 
@@ -130,6 +159,21 @@ export interface WaTemplate {
   track?: WaTrack;
   day?: number;
   media?: WaMedia | null;
+  /** Campaign rows: English in `text`, Hinglish in `text_hi`, a draft until both are written. */
+  category?: WaCategory;
+  type_name?: string;
+  /** Outreach and Offer: stage 1-3. */
+  stage?: number;
+  /** Outreach: the day 1-90. Engage, Demo video: step 1-6. Setup, Testimonial: 1-2. */
+  step?: number;
+  text_hi?: string;
+  coupon?: number | null;
+  coupon_info?: { code: string; percent_off: number; plan_codes: string[]; starts_on: string; ends_on: string | null; status: string } | null;
+  /** Offer: a festival code; the queue never picks it, staff do. */
+  event?: boolean;
+  archived?: boolean;
+  draft?: boolean;
+  performance?: { sends: number; replies: number; next: number } | null;
 }
 
 export interface WaFileRow {
@@ -146,11 +190,33 @@ export interface WaFileRow {
   message: string;
 }
 
+export interface WaQueueItem {
+  kind: Exclude<WaSendKind, "reply" | "custom">;
+  template: string;
+  /** 90-day campaign rows (kind "flow"): the template, its label, and whether it is still a draft. */
+  template_id?: number | null;
+  label?: string;
+  category?: WaCategory;
+  draft?: boolean;
+  /** "set_track" = waiting for staff to set the contact's Track from their Engage answer. */
+  note?: string;
+  contact: WaContact;
+}
+
+export interface WaCampaignCounts {
+  status: Partial<Record<Exclude<WaCampaignStatus, "">, number>>;
+  track: Record<"privacy" | "activity" | "both", number>;
+  track_to_set: number;
+  reviews_written: number;
+  reviews_video: number;
+}
+
 export interface WaToday {
-  queue: { kind: Exclude<WaSendKind, "reply" | "custom">; template: string; contact: WaContact }[];
+  queue: WaQueueItem[];
   replies: WaContact[];
   sent_today: number;
   stats: WaStats;
+  campaign?: WaCampaignCounts;
 }
 
 export interface WaAnalytics {
@@ -193,14 +259,18 @@ export interface WaNewContact {
 /** 400 carries a message per field (ApiError.fields): firm, phone, segment, country, city, campaign. */
 export const addWaContact = (c: WaNewContact) => request<WaContact>(`${BASE}/contacts/`, post(c));
 export const getWaContact = (id: number) => request<WaContact>(`${BASE}/contacts/${id}/`);
-export const patchWaContact = (id: number, patch: Partial<Pick<WaContact, "campaign" | "first_name" | "firm" | "segment" | "city" | "info" | "track">>) =>
+export const patchWaContact = (id: number, patch: Partial<Pick<WaContact, "campaign" | "first_name" | "firm" | "segment" | "city" | "info" | "track" | "pack">>) =>
   request<WaContact>(`${BASE}/contacts/${id}/`, { method: "PATCH", body: JSON.stringify(patch) });
 export const deleteWaContact = (id: number) => request<null>(`${BASE}/contacts/${id}/`, { method: "DELETE" });
 /** `template` picks any template for a one-off (Contacts → Send WhatsApp); without it the campaign's template of `kind`. */
-export const draftFor = (id: number, kind: WaKind, template?: number) => request<{ text: string; template: string; by: "claude" | "template"; media: WaMedia | null; creative?: string; notes?: string; language?: WaLanguage }>(`${BASE}/contacts/${id}/draft/`, post(template ? { kind, template } : { kind }));
-export const markSent = (id: number, kind: WaSendKind, text: string) => request<WaContact>(`${BASE}/contacts/${id}/sent/`, post({ kind, text }));
+export const draftFor = (id: number, kind: WaKind | "flow", template?: number) => request<{ text: string; template: string; template_id?: number; label?: string; by: "claude" | "template"; media: WaMedia | null; creative?: string; notes?: string; language?: WaLanguage }>(`${BASE}/contacts/${id}/draft/`, post(template ? { kind, template } : { kind }));
+/** `template`: the campaign template it came from. A campaign template (any category) moves the contact's path. */
+export const markSent = (id: number, kind: WaSendKind, text: string, template?: number | null) => request<WaContact>(`${BASE}/contacts/${id}/sent/`, post(template ? { kind, text, template } : { kind, text }));
 export const logReply = (id: number, text: string) => request<WaContact>(`${BASE}/contacts/${id}/reply/`, post({ text }));
-export const actOn = (id: number, action: "interested" | "signed" | "notnow" | "stop" | "pause" | "resume" | "optin", note = "") => request<WaContact>(`${BASE}/contacts/${id}/act/`, post({ action, note }));
+export type WaAction = "interested" | "signed" | "notnow" | "stop" | "pause" | "resume" | "optin"
+  /* 90-day campaign: `track` takes the Track in `note`. */
+  | "track" | "paid" | "setup_error" | "setup_ok" | "using" | "review_written" | "review_video";
+export const actOn = (id: number, action: WaAction, note = "") => request<WaContact>(`${BASE}/contacts/${id}/act/`, post({ action, note }));
 
 function fileBody(file: File, choices?: Record<string, WaChoice>): FormData {
   const body = new FormData();

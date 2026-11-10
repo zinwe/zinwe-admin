@@ -7,7 +7,8 @@ import {
   actOn, addWaContact, addWaFile, deleteWaContact, downloadWaTemplate, getWaContact, patchWaContact, reviewWaFile,
   type WaCampaign, type WaChoice, type WaContact, type WaFileRow, type WaNewContact, type WaStatus, type WaTrack,
 } from "../../../lib/whatsappApi";
-import { Bubble, errText, KIND_LABEL, nameOf, TRACK_LABEL, when, WaPill, WA_STATUS } from "./shared";
+import { CampaignSection } from "./CampaignContact";
+import { Bubble, CampaignPill, CATEGORY_LABEL, errText, KIND_LABEL, nameOf, TRACK_LABEL, TRACKED, trackName, when, WaPill, WA_STATUS } from "./shared";
 import { Attach } from "./TodayTab";
 
 /**
@@ -25,7 +26,10 @@ function SendModal({ c, templates, onClose, onSent }: { c: WaContact; templates:
   const [busy, setBusy] = useState(false);
   const [opened, setOpened] = useState(false);
   const chosen = templates.find((t) => t.id === pick);
-  const kinds = [...new Set(templates.map((t) => t.kind))];
+  const older = templates.filter((t) => !t.category && !t.archived);
+  const campaignRows = templates.filter((t) => t.category && !t.archived && !t.draft);
+  const kinds = [...new Set(older.map((t) => t.kind))];
+  const cats = [...new Set(campaignRows.map((t) => t.category))];
   const choose = async (id: number) => {
     setPick(id);
     setOpened(false);
@@ -39,7 +43,7 @@ function SendModal({ c, templates, onClose, onSent }: { c: WaContact; templates:
     const t = templates.find((x) => x.id === id);
     setBusy(true);
     try {
-      const d = await draftFor(c.id, t?.kind ?? "first", id);
+      const d = await draftFor(c.id, t?.category ? "flow" : t?.kind ?? "first", id);
       setText(d.text);
       setMedia(d.media ?? null);
       setHints({ creative: d.creative ?? "", notes: d.notes ?? "" });
@@ -50,12 +54,13 @@ function SendModal({ c, templates, onClose, onSent }: { c: WaContact; templates:
     setBusy(false);
   };
   // A first-message template to someone who hasn't had one starts their sequence; anything else is a one-off.
-  const sendKind = chosen?.kind === "first" && c.step === 0 ? "first" : "custom";
+  // A campaign template (any category) moves the 90-day path: Track checks, steps and status.
+  const sendKind = chosen?.category ? "flow" : chosen?.kind === "first" && c.step === 0 ? "first" : "custom";
   const sent = async () => {
     setBusy(true);
     try {
-      await markSent(c.id, sendKind, text);
-      toast(sendKind === "first" ? "Marked as sent. Their sequence has started." : "Marked as sent.");
+      await markSent(c.id, sendKind, text, chosen?.category ? chosen.id : null);
+      toast(sendKind === "first" ? "Marked as sent. Their sequence has started." : sendKind === "flow" ? "Marked as sent. Their campaign path moved on." : "Marked as sent.");
       onSent();
       onClose();
     } catch (err) {
@@ -74,16 +79,23 @@ function SendModal({ c, templates, onClose, onSent }: { c: WaContact; templates:
         <label className="fl">Start from
           <select className="inp" value={pick} disabled={busy} onChange={(e) => void choose(Number(e.target.value))}>
             <option value={0}>Custom message</option>
+            {cats.map((k) => (
+              <optgroup key={k} label={`90-day campaign · ${CATEGORY_LABEL[k as keyof typeof CATEGORY_LABEL]}`}>
+                {campaignRows.filter((t) => t.category === k).map((t) => (
+                  <option key={t.id} value={t.id} disabled={TRACKED.includes(t.category ?? "") && !!c.track && t.track !== c.track}>{t.name}</option>
+                ))}
+              </optgroup>
+            ))}
             {kinds.map((k) => (
               <optgroup key={k} label={KIND_LABEL[k]}>
-                {templates.filter((t) => t.kind === k).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                {older.filter((t) => t.kind === k).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
               </optgroup>
             ))}
           </select>
         </label>
         <span className="wa-by">{busy ? "Drafting…" : by}</span>
         <textarea className="inp" rows={9} maxLength={2000} aria-label={`Message to ${nameOf(c)}`} value={text} onChange={(e) => setText(e.target.value)} />
-        <span className="k">{text.length} characters · {sendKind === "first" ? "Sending this starts their sequence: the follow-up comes on schedule." : "A one-off: their sequence doesn’t move."}</span>
+        <span className="k">{text.length} characters · {sendKind === "first" ? "Sending this starts their sequence: the follow-up comes on schedule." : sendKind === "flow" ? "A campaign template: sending it moves their 90-day path." : "A one-off: their sequence doesn’t move."}</span>
         {media ? <Attach media={media} /> : null}
         {hints.creative && !media ? <p className="k wa-hint"><b>Creative:</b> {hints.creative}</p> : null}
         {hints.notes ? <details className="wa-hint"><summary className="k">Notes for replies (not sent)</summary><p className="k">{hints.notes}</p></details> : null}
@@ -388,11 +400,13 @@ function ContactDrawer({ id, campaigns, onClose, onChanged }: { id: number; camp
               {campaigns.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
             </select>
           </label>
-          <label className="fl">After-YES sequence {c.yes_date ? <span className="k">YES on {when(c.yes_date)}</span> : null}
-            <select className="inp" value={c.track} onChange={(e) => void run(() => patchWaContact(c.id, { track: e.target.value as WaTrack }), "Sequence changed.")}>
-              {(Object.keys(TRACK_LABEL) as WaTrack[]).map((t) => <option key={t} value={t}>{t ? TRACK_LABEL[t] : "Not chosen yet"}</option>)}
-            </select>
-          </label>
+          {c.plan === "ninety" ? <CampaignSection c={c} run={run} /> : (
+            <label className="fl">After-YES sequence {c.yes_date ? <span className="k">YES on {when(c.yes_date)}</span> : null}
+              <select className="inp" value={c.track} onChange={(e) => void run(() => patchWaContact(c.id, { track: e.target.value as WaTrack }), "Sequence changed.")}>
+                {(Object.keys(TRACK_LABEL) as WaTrack[]).map((t) => <option key={t} value={t}>{t ? TRACK_LABEL[t] : "Not chosen yet"}</option>)}
+              </select>
+            </label>
+          )}
           <div className="mk-sec">
             <h3>Options for this contact</h3>
             <div className="mk-acts">
@@ -409,7 +423,7 @@ function ContactDrawer({ id, campaigns, onClose, onChanged }: { id: number; camp
           <div className="mk-sec">
             <h3>Conversation</h3>
             <div className="wa-chat">
-              {(c.messages ?? []).length ? (c.messages ?? []).map((m) => <Bubble key={m.id} text={m.text} mine={m.kind !== "theirs"} meta={`${when(m.at)}${m.by && m.kind !== "theirs" ? ` · ${m.by}` : ""}`} />) : <span className="k">Nothing sent yet.</span>}
+              {(c.messages ?? []).length ? (c.messages ?? []).map((m) => <Bubble key={m.id} text={m.text} mine={m.kind !== "theirs"} meta={`${when(m.at)}${m.label ? ` · ${m.label}` : ""}${m.by && m.kind !== "theirs" ? ` · ${m.by}` : ""}`} />) : <span className="k">Nothing sent yet.</span>}
             </div>
           </div>
         </div>
@@ -424,6 +438,7 @@ const VIEWS: [string, string, (c: WaContact) => boolean][] = [
   ["ready", "Ready", (c) => c.status === "ready" && c.opted_in],
   ["talking", "In conversation", (c) => c.status === "messaged" || c.status === "replied"],
   ["won", "Interested or signed up", (c) => c.status === "interested" || c.status === "signed"],
+  ["track", "Track to set", (c) => c.plan === "ninety" && !!c.yes_date && !c.track && c.campaign_status !== "paid" && c.campaign_status !== "opted_out"],
   ["stop", "Do not message", (c) => c.status === "stop"],
 ];
 
@@ -457,14 +472,16 @@ export function ContactsTab({ contacts, campaigns, templates, reload }: { contac
         <div className="scroll">
           <table className="tbl">
             <caption className="sr">WhatsApp contacts</caption>
-            <thead><tr><th scope="col">Business</th><th scope="col">Phone</th><th scope="col">Segment</th><th scope="col">Status</th><th scope="col">Campaign</th><th scope="col">Latest</th><th scope="col"><span className="sr">Send</span></th></tr></thead>
+            <thead><tr><th scope="col">Business</th><th scope="col">Phone</th><th scope="col">Segment</th><th scope="col">Track</th><th scope="col">Status</th><th scope="col">Day</th><th scope="col">Campaign</th><th scope="col">Latest</th><th scope="col"><span className="sr">Send</span></th></tr></thead>
             <tbody>
               {rows.map((c) => (
                 <tr key={c.id} className="click" onClick={() => setOpen(c.id)}>
                   <th scope="row"><button type="button" className="cobtn" onClick={(e) => { e.stopPropagation(); setOpen(c.id); }}>{c.short_name || c.firm}</button><span className="k" style={{ display: "block" }}>{c.salutation ?? `Hi ${c.greet_as}`} · {c.city}</span></th>
                   <td className="num">{c.phone}</td>
                   <td>{c.segment}</td>
-                  <td>{c.opted_in ? <WaPill s={c.status as WaStatus} /> : <span className="pill" title="Locked until they opt in">Not opted in</span>}</td>
+                  <td>{c.plan === "ninety" || c.track ? <span className={"pill" + (c.track ? "" : " wa-todo")}>{trackName(c.track)}</span> : <span className="k">—</span>}</td>
+                  <td>{!c.opted_in ? <span className="pill" title="Locked until they opt in">Not opted in</span> : c.plan === "ninety" ? <CampaignPill s={c.campaign_status} /> : <WaPill s={c.status as WaStatus} />}</td>
+                  <td className="num">{c.day ? `${c.day} · S${c.stage}` : <span className="k">—</span>}</td>
                   <td>{c.campaign_name || <span className="k">None</span>}</td>
                   <td className="k">{c.last ? `${c.last.kind === "theirs" ? "They wrote" : "Sent"} ${when(c.last.at)}` : WA_STATUS[c.status][0]}</td>
                   <td className="wa-sendcell">

@@ -125,3 +125,18 @@
 .wa-picker__list { max-height: 50vh; overflow: auto; border: 1px solid var(--line); border-radius: 10px; }
 @media (max-width: 1100px) { .wa-crow { grid-template-columns: minmax(0, 1fr) auto; } .wa-crow__people, .wa-funnel { grid-column: 1 / -1; } .wa-crow__act { grid-row: 1; grid-column: 2; } }
 @media (max-width: 720px) { .wa-cstrip { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* 90-day campaign (100 Reviews): the templates table, Track pills, the contact's path */
+.wa .wa-ttable td, .wa .wa-ttable th { vertical-align: top; }
+.wa .wa-ttable .wa-tmsg { min-width: 220px; max-width: 320px; font-size: 13px; line-height: 1.45; white-space: pre-wrap; display: table-cell; }
+.wa .wa-ttable .wa-tmsg { overflow: hidden; text-overflow: ellipsis; }
+.wa .wa-ttable .wa-tacts { display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
+.wa .pill.wa-todo { border: 1px dashed var(--line-2); background: transparent; color: var(--ink-3); }
+.wa .wa-code { display: block; font-family: var(--mono, ui-monospace, monospace); font-size: 12px; letter-spacing: .04em; }
+.wa .wa-tnote { display: block; margin-top: 4px; font-size: 11px; line-height: 1.4; }
+.wa .wa-track { display: flex; flex-direction: column; gap: 10px; padding: 14px; border: 1px solid var(--accent); border-left-width: 4px; border-radius: 10px; }
+.wa .wa-track .fr { flex-wrap: wrap; }
+.wa .wa-path { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.wa .wa-path li { display: flex; gap: 8px; align-items: baseline; color: var(--ink-3); }
+.wa .wa-path li.done { color: var(--ink); font-weight: 600; }
+.wa .wa-path li::before { content: ""; flex: none; width: 10px; height: 10px; border-radius: 50%; border: 1px solid var(--line-2); transform: translateY(1px); }
+.wa .wa-path li.done::before { background: var(--ink); border-color: var(--ink); }

@@ -2,10 +2,11 @@ import { useEffect, useState, type ReactElement } from "react";
 import { Link } from "react-router-dom";
 import {
   actOn, draftFor, fetchWaMedia, logReply, markSent, patchWaContact, waLink,
-  type WaContact, type WaKind, type WaMedia, type WaSendKind, type WaToday, type WaTrack,
+  type WaContact, type WaKind, type WaMedia, type WaQueueItem, type WaSendKind, type WaTemplate, type WaToday, type WaTrack,
 } from "../../../lib/whatsappApi";
 import { useToast } from "../../../components/Toast";
-import { Bubble, errText, initials, KIND_LABEL, mediaWord, MediaView, nameOf, sizeText, TRACK_LABEL } from "./shared";
+import { TrackSetter } from "./CampaignContact";
+import { Bubble, CATEGORY_LABEL, errText, initials, KIND_LABEL, mediaWord, MediaView, nameOf, sizeText, TRACK_LABEL, trackName } from "./shared";
 
 /** Clipboards take PNG only, so other pictures are redrawn as PNG first. */
 async function asPng(blob: Blob): Promise<Blob> {
@@ -82,7 +83,7 @@ function TrackPicker({ c, onDone }: { c: WaContact; onDone: () => void }): React
 }
 
 /** One draft: Claude's (or the template's) text, editable, with Open in WhatsApp and Mark as sent. */
-function Draft({ c, kind, send, onDone }: { c: WaContact; kind: WaKind; send: WaSendKind; onDone: () => void }): ReactElement {
+function Draft({ c, kind, send, onDone, template }: { c: WaContact; kind: WaKind | "flow"; send: WaSendKind; onDone: () => void; template?: number | null }): ReactElement {
   const toast = useToast();
   const [text, setText] = useState("");
   const [by, setBy] = useState("");
@@ -90,18 +91,23 @@ function Draft({ c, kind, send, onDone }: { c: WaContact; kind: WaKind; send: Wa
   const [opened, setOpened] = useState(false);
   const [media, setMedia] = useState<WaMedia | null>(null);
   const [hints, setHints] = useState<{ creative: string; notes: string }>({ creative: "", notes: "" });
+  const [used, setUsed] = useState<number | null>(null);
   const load = () => {
     setBusy(true);
-    draftFor(c.id, kind)
-      .then((d) => { setText(d.text); setMedia(d.media ?? null); setHints({ creative: d.creative ?? "", notes: d.notes ?? "" }); setBy(`${d.by === "claude" ? `Personalised by Claude from ${d.template}` : `From the template ${d.template}`}${d.language === "hi" ? " · Hinglish" : ""}`); })
+    draftFor(c.id, kind, template ?? undefined)
+      .then((d) => {
+        setText(d.text); setMedia(d.media ?? null); setHints({ creative: d.creative ?? "", notes: d.notes ?? "" });
+        setUsed(d.label ? d.template_id ?? null : null);
+        setBy(`${d.by === "claude" ? `Personalised by Claude from ${d.template}` : `From the template ${d.template}`}${d.language === "hi" ? " · Hinglish" : ""}`);
+      })
       .catch((err) => toast(errText(err, "Couldn't draft this message."), "bad"))
       .finally(() => setBusy(false));
   };
-  useEffect(load, [c.id, kind, c.track]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(load, [c.id, kind, c.track, template]); // eslint-disable-line react-hooks/exhaustive-deps
   const sent = async () => {
     setBusy(true);
     try {
-      await markSent(c.id, send, text);
+      await markSent(c.id, send, text, used);
       toast("Marked as sent.");
       onDone();
     } catch (err) {
@@ -142,9 +148,12 @@ function Who({ c, note }: { c: WaContact; note: string }): ReactElement {
   );
 }
 
-function Reply({ c, onDone }: { c: WaContact; onDone: () => void }): ReactElement {
+function Reply({ c, templates, onDone }: { c: WaContact; templates: WaTemplate[]; onDone: () => void }): ReactElement {
   const toast = useToast();
   const [kind, setKind] = useState<WaKind>(c.status === "interested" ? "interested" : "question");
+  const ninety = c.plan === "ninety";
+  const answers = templates.filter((t) => t.category && !t.archived && !t.draft && (t.category === "quick_reply" || !t.track || !c.track || t.track === c.track));
+  const [answer, setAnswer] = useState(0);
   const theirs = (c.messages ?? []).filter((m) => m.kind === "theirs").slice(-2);
   const act = async (action: "interested" | "notnow" | "stop") => {
     try {
@@ -167,8 +176,17 @@ function Reply({ c, onDone }: { c: WaContact; onDone: () => void }): ReactElemen
         <button type="button" className={"chip" + (kind === "notnow" ? " on" : "")} onClick={() => void act("notnow")}>Not now</button>
         <button type="button" className="chip wa-stop" onClick={() => void act("stop")}>Stop, never again</button>
       </div>
-      {kind === "interested" ? <TrackPicker c={c} onDone={onDone} /> : null}
-      <Draft c={c} kind={kind} send="reply" onDone={onDone} />
+      {ninety && c.yes_date && !c.track ? <TrackSetter c={c} onDone={(_, done) => { toast(done); onDone(); }} /> : null}
+      {kind === "interested" && !ninety ? <TrackPicker c={c} onDone={onDone} /> : null}
+      {ninety ? (
+        <label className="fl">Answer with <span className="k">A quick reply never moves their path; a campaign template does</span>
+          <select className="inp" value={answer} onChange={(e) => setAnswer(Number(e.target.value))}>
+            <option value={0}>{c.yes_date ? "The next message in their path" : `The reply template for “${kind === "interested" ? "interested" : kind === "notnow" ? "not now" : "a question"}”`}</option>
+            {answers.map((t) => <option key={t.id} value={t.id}>{CATEGORY_LABEL[t.category as keyof typeof CATEGORY_LABEL]} · {t.name}</option>)}
+          </select>
+        </label>
+      ) : null}
+      <Draft c={c} kind={ninety && c.yes_date && !answer ? "flow" : kind} send="reply" template={answer || null} onDone={onDone} />
     </div>
   );
 }
@@ -204,14 +222,40 @@ function LogReply({ contacts, onDone }: { contacts: WaContact[]; onDone: () => v
   );
 }
 
-export function TodayTab({ data, contacts, reload }: { data: WaToday; contacts: WaContact[]; reload: () => void }): ReactElement {
+function QueueItem({ q, reload }: { q: WaQueueItem; reload: () => void }): ReactElement {
+  const toast = useToast();
+  const c = q.contact;
+  const where = c.campaign_name ? ` · ${c.campaign_name}` : "";
+  if (q.kind !== "flow") {
+    return (
+      <div className="wa-item">
+        <Who c={c} note={`${q.kind === "nurture" ? `After YES · ${q.template}` : KIND_LABEL[q.kind as WaKind]}${where}`} />
+        {q.kind === "nurture" ? <TrackPicker c={c} onDone={reload} /> : null}
+        <Draft c={c} kind={q.kind as WaKind} send={q.kind} onDone={reload} />
+      </div>
+    );
+  }
+  const track = c.track ? ` · Track ${trackName(c.track)}` : "";
+  return (
+    <div className="wa-item">
+      <Who c={c} note={`${q.label || "Set the Track"}${c.day ? ` · their day ${c.day} of 90` : " · their first message"}${track}${where}`} />
+      {q.note === "set_track" ? <TrackSetter c={c} onDone={(_, done) => { toast(done); reload(); }} />
+        : q.draft ? <p className="k wa-hint">Due today, but <b>{q.label}</b> is still a draft. <Link to="/marketing/whatsapp/templates">Write its English and Hinglish in Templates</Link>; a draft is never sent.</p>
+          : <Draft c={c} kind="flow" send="flow" template={q.template_id} onDone={reload} />}
+    </div>
+  );
+}
+
+export function TodayTab({ data, contacts, templates, reload }: { data: WaToday; contacts: WaContact[]; templates: WaTemplate[]; reload: () => void }): ReactElement {
   const s = data.stats;
+  const camp = data.campaign;
   const rate = s.messaged ? Math.round((s.replied / s.messaged) * 100) : 0;
   const talking = contacts.filter((c) => c.step > 0 && c.status !== "stop");
   return (
     <>
       <div className="tiles">
-        {([[data.sent_today, "Sent today"], [data.queue.length, "Messages to send"], [data.replies.length, "Replies to answer"], [`${rate}%`, "Reply rate"], [s.stopped, "Asked to stop"]] as [string | number, string][]).map(([v, l]) => (
+        {([[data.sent_today, "Sent today"], [data.queue.length, "Messages to send"], [data.replies.length, "Replies to answer"], [`${rate}%`, "Reply rate"], [s.stopped, "Asked to stop"],
+          ...(camp ? [[camp.track_to_set, "Tracks to set"], [`${camp.reviews_written} · ${camp.reviews_video}`, "Reviews: written · video"]] : [])] as [string | number, string][]).map(([v, l]) => (
           <div key={l} className="card tile"><b className="num">{v}</b><span className="k">{l}</span></div>
         ))}
       </div>
@@ -224,17 +268,12 @@ export function TodayTab({ data, contacts, reload }: { data: WaToday; contacts: 
       <div className="wa-grid">
         <section className="card editor">
           <div className="fighead"><h2>Replies to answer</h2><span className="k">Answer these first</span></div>
-          {data.replies.length ? data.replies.map((c) => <Reply key={c.id} c={c} onDone={reload} />) : <span className="k">No replies waiting.</span>}
+          {data.replies.length ? data.replies.map((c) => <Reply key={c.id} c={c} templates={templates} onDone={reload} />) : <span className="k">No replies waiting.</span>}
         </section>
         <section className="card editor">
           <div className="fighead"><h2>Messages to send</h2><span className="k">{data.queue.length} due: after-YES steps first, then live campaigns</span></div>
-          {data.queue.length ? data.queue.map((q) => (
-            <div key={`${q.kind}-${q.contact.id}`} className="wa-item">
-              <Who c={q.contact} note={`${q.kind === "nurture" ? `After YES · ${q.template}` : KIND_LABEL[q.kind]}${q.contact.campaign_name ? ` · ${q.contact.campaign_name}` : ""}`} />
-              {q.kind === "nurture" ? <TrackPicker c={q.contact} onDone={reload} /> : null}
-              <Draft c={q.contact} kind={q.kind} send={q.kind} onDone={reload} />
-            </div>
-          )) : <span className="k">Nothing due. Start a campaign in <Link to="/marketing/whatsapp/campaigns">Campaigns</Link>, or add contacts to a live one.</span>}
+          {data.queue.length ? data.queue.map((q) => <QueueItem key={`${q.kind}-${q.contact.id}`} q={q} reload={reload} />)
+            : <span className="k">Nothing due. Start a campaign in <Link to="/marketing/whatsapp/campaigns">Campaigns</Link>, or add contacts to a live one.</span>}
         </section>
       </div>
       <LogReply contacts={talking} onDone={reload} />

@@ -8,6 +8,7 @@ import {
   Bubble, COLD_KINDS, composeParts, errText, isStructured, KIND_LABEL, LANG_LABEL, MEDIA_ACCEPT, mediaProblem, mediaWord, MediaView, PARTS,
   sampleText as sample, sizeText, TRACK_LABEL,
 } from "./shared";
+import { CampaignTemplates } from "./CampaignTemplates";
 
 const KINDS = Object.keys(KIND_LABEL) as WaKind[];
 const label = (t: WaTemplate) => (t.kind === "nurture" ? `After YES · ${TRACK_LABEL[t.track ?? ""]} · day ${t.day ?? 0}` : KIND_LABEL[t.kind]);
@@ -22,7 +23,7 @@ function splitText(text: string): WaParts {
 }
 
 /** The media picker, shared by both editors: cold messages stay text only. */
-function MediaPicker({ t, cold, file, setFile, drop, setDrop }: {
+export function MediaPicker({ t, cold, file, setFile, drop, setDrop }: {
   t: WaTemplate; cold: boolean; file: File | null; setFile: (f: File | null) => void; drop: boolean; setDrop: (d: boolean) => void;
 }): ReactElement {
   const [problem, setProblem] = useState("");
@@ -177,6 +178,21 @@ function Editor({ t, templates, onClose, onSaved }: { t: WaTemplate; templates: 
 }
 
 export function TemplatesTab({ templates, reload }: { templates: WaTemplate[]; reload: () => void }): ReactElement {
+  const campaign = templates.filter((t) => t.category);
+  const older = templates.filter((t) => !t.category && !t.archived);
+  const [showOlder, setShowOlder] = useState(campaign.length === 0);
+  const toggle = (
+    <div className="seg" role="tablist" aria-label="Which templates">
+      <button type="button" role="tab" aria-selected={!showOlder} className={!showOlder ? "on" : ""} onClick={() => setShowOlder(false)}>90-day campaign · {campaign.length}</button>
+      <button type="button" role="tab" aria-selected={showOlder} className={showOlder ? "on" : ""} onClick={() => setShowOlder(true)}>Older templates · {older.length}</button>
+    </div>
+  );
+  return showOlder
+    ? <OlderTemplates templates={older} reload={reload} toggle={toggle} />
+    : <CampaignTemplates templates={campaign} reload={reload} toggle={toggle} />;
+}
+
+function OlderTemplates({ templates, reload, toggle }: { templates: WaTemplate[]; reload: () => void; toggle: ReactElement }): ReactElement {
   const toast = useToast();
   const [kind, setKind] = useState<WaKind | "">("");
   const [lang, setLang] = useState<WaLanguage | "">("");
@@ -185,6 +201,7 @@ export function TemplatesTab({ templates, reload }: { templates: WaTemplate[]; r
   const rows = templates.filter((t) => (!kind || t.kind === kind) && (!lang || (t.language ?? "en") === lang)).sort((a, b) => (a.kind === "nurture" && b.kind === "nurture" ? (a.day ?? 0) - (b.day ?? 0) : 0));
   return (
     <>
+      {toggle}
       <div className="fr between">
         <div className="fr" role="group" aria-label="Type">
           <button type="button" className={"chip" + (kind === "" ? " on" : "")} onClick={() => setKind("")}>All</button>
