@@ -3,7 +3,7 @@ import { NavLink } from "react-router-dom";
 import { ApiError } from "../../../lib/api";
 import {
   fetchWaMedia, type WaCampaignStatus, type WaCategory, type WaContact, type WaKind, type WaLanguage, type WaMedia, type WaParts, type WaStatus,
-  type WaTestimonial, type WaTrack,
+  type WaTemplate, type WaTestimonial, type WaTrack,
 } from "../../../lib/whatsappApi";
 
 export const LANG_LABEL: Record<WaLanguage, string> = { en: "English", hi: "Hinglish" };
@@ -166,4 +166,46 @@ export function MediaView({ media, file }: { media?: WaMedia | null; file?: File
   return kind === "video"
     ? <video className="wa-media" src={src} controls preload="metadata" aria-label="Video" />
     : <img className="wa-media" src={src} alt="Picture sent with this message" />;
+}
+
+/** The media picker, shared by the template editors: cold messages stay text only. */
+export function MediaPicker({ t, cold, file, setFile, drop, setDrop }: {
+  t: WaTemplate; cold: boolean; file: File | null; setFile: (f: File | null) => void; drop: boolean; setDrop: (d: boolean) => void;
+}): ReactElement {
+  const [problem, setProblem] = useState("");
+  const kept = drop ? null : t.media ?? null;
+  const showing = !cold && (file || kept);
+  const pick = (picked: File | undefined) => {
+    if (!picked) return;
+    const why = mediaProblem(picked);
+    setProblem(why);
+    if (!why) {
+      setFile(picked);
+      setDrop(false);
+    }
+  };
+  if (cold) {
+    return <span className="k">{KIND_LABEL[t.kind]} goes to people who haven’t replied, so it stays text only: to a stranger, a picture or video looks like spam. Put the creative idea above and use it on the reply.{t.media && !drop ? " Its saved file will be removed when you save." : ""}</span>;
+  }
+  return (
+    <>
+      {showing ? (
+        <div className="wa-mfile">
+          <span>{file ? `${file.name} · ${sizeText(file.size)}` : `${kept?.name} · ${sizeText(kept?.size ?? 0)}`}</span>
+          <div className="fr">
+            <label className="btn sm">Replace<input className="sr" type="file" accept={MEDIA_ACCEPT} onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} /></label>
+            <button type="button" className="btn sm" onClick={() => { setFile(null); setDrop(true); setProblem(""); }}>Remove</button>
+          </div>
+        </div>
+      ) : (
+        <label className="wa-mdrop">
+          <input className="sr" type="file" accept={MEDIA_ACCEPT} aria-label="Choose a picture or video" onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} />
+          <b>Add the creative: a picture or video</b>
+          <span className="k">JPG, PNG or WebP up to 5 MB · MP4 or MOV up to 9 MB</span>
+        </label>
+      )}
+      {problem ? <span className="aferr" role="alert">{problem}</span> : null}
+      {showing ? <span className="k">WhatsApp links carry text only. When you send this, Today shows the {mediaWord(file ? (file.type.startsWith("video") ? "video" : "image") : kept?.kind ?? "image")} to paste or attach in the chat.</span> : null}
+    </>
+  );
 }

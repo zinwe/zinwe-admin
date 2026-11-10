@@ -1,4 +1,4 @@
-import { useCallback, type ReactElement } from "react";
+import { useCallback, useState, type ReactElement } from "react";
 import { Link, useParams } from "react-router-dom";
 import { PageHeader } from "../../../components/PageHeader";
 import { ErrorState, LoadingState } from "../../../components/States";
@@ -9,6 +9,7 @@ import { AnalyticsTab, SettingsTab } from "./AnalyticsTab";
 import { CampaignEditor, CampaignList } from "./CampaignsTab";
 import { ContactsTab } from "./ContactsTab";
 import { WaTabs } from "./shared";
+import { readCardLang, writeCardLang, type CardLang } from "./templateParts";
 import { TemplatesTab } from "./TemplatesTab";
 import { TodayTab } from "./TodayTab";
 import "../../../styles/marketing.css";
@@ -18,7 +19,7 @@ const SUB: Record<string, string> = {
   today: "Today's replies to answer and messages to send. Zinwe drafts each one; you send it yourself from WhatsApp.",
   contacts: "Everyone you may message on WhatsApp. Add them one at a time or from a sheet, then choose what happens to each contact.",
   campaigns: "Each campaign sends one message sequence to one target audience from Persona.",
-  templates: "Message drafts, the way they land in a WhatsApp chat. Drafts start from these.",
+  templates: "Every message your team sends is a template. Pick a category or one of your tags; each card shows the message as the contact will read it.",
   analytics: "All WhatsApp campaigns together: what was sent, who replied and what they did next.",
   settings: "How WhatsApp messages leave Zinwe, and the rules every campaign follows.",
 };
@@ -32,6 +33,9 @@ export function WhatsAppPage(): ReactElement {
   );
   const { data, error, pending, reload } = useLoad(load);
   const editing = tab === "campaigns" && id;
+  // Templates: the Language every card shows (remembered), and New template, both in the header.
+  const [cardLang, setCardLang] = useState<CardLang>(readCardLang);
+  const [newTick, setNewTick] = useState(0);
 
   let body: ReactElement;
   if (error) body = <ErrorState message={error} onRetry={reload} />;
@@ -45,7 +49,7 @@ export function WhatsAppPage(): ReactElement {
         : <CampaignEditor key={id} campaign={campaign} templates={templates} audiences={audiences} contacts={contacts} onSaved={reload} />;
     } else if (tab === "contacts") body = <ContactsTab contacts={contacts} campaigns={campaigns} templates={templates} reload={reload} />;
     else if (tab === "campaigns") body = <CampaignList campaigns={campaigns} templates={templates} />;
-    else if (tab === "templates") body = <TemplatesTab templates={templates} reload={reload} />;
+    else if (tab === "templates") body = <TemplatesTab templates={templates} contacts={contacts} reload={reload} lang={cardLang} newTick={newTick} />;
     else if (tab === "analytics" && analytics) body = <AnalyticsTab data={analytics} />;
     else if (tab === "settings") body = <SettingsTab />;
     else body = <TodayTab data={today} contacts={contacts} templates={templates} reload={reload} />;
@@ -54,7 +58,18 @@ export function WhatsAppPage(): ReactElement {
   return (
     <div className="mk wa">
       <PageHeader title="WhatsApp outreach" subtitle={SUB[tab] ?? SUB.today} onReload={reload} pending={pending}>
-        <Link className="btn dark" to="/marketing/whatsapp/campaigns/new">New campaign</Link>
+        {tab === "templates" ? (
+          <>
+            <label className="wt-sel">Language
+              <select value={cardLang} aria-label="Language" onChange={(e) => { const v = e.target.value as CardLang; setCardLang(v); writeCardLang(v); }}>
+                <option value="en">English</option>
+                <option value="hi">Hinglish</option>
+                <option value="both">Both</option>
+              </select>
+            </label>
+            <button type="button" className="btn dark" onClick={() => setNewTick((n) => n + 1)}>New template</button>
+          </>
+        ) : <Link className="btn dark" to="/marketing/whatsapp/campaigns/new">New campaign</Link>}
       </PageHeader>
       <WaTabs count={count} />
       {body}

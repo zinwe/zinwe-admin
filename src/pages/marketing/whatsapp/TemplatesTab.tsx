@@ -3,12 +3,14 @@ import { ConfirmDialog } from "../../../components/ConfirmDialog";
 import { Modal } from "../../../components/Modal";
 import { useToast } from "../../../components/Toast";
 import { ApiError } from "../../../lib/api";
-import { deleteWaTemplate, removeWaMedia, saveWaTemplate, uploadWaMedia, type WaKind, type WaLanguage, type WaParts, type WaTemplate, type WaTrack } from "../../../lib/whatsappApi";
 import {
-  Bubble, COLD_KINDS, composeParts, errText, isStructured, KIND_LABEL, LANG_LABEL, MEDIA_ACCEPT, mediaProblem, mediaWord, MediaView, PARTS,
-  sampleText as sample, sizeText, TRACK_LABEL,
+  deleteWaTemplate, removeWaMedia, saveWaTemplate, uploadWaMedia, type WaContact, type WaKind, type WaLanguage, type WaParts, type WaTemplate, type WaTrack,
+} from "../../../lib/whatsappApi";
+import {
+  Bubble, COLD_KINDS, composeParts, errText, isStructured, KIND_LABEL, LANG_LABEL, MediaPicker, MediaView, PARTS, sampleText as sample, TRACK_LABEL,
 } from "./shared";
-import { CampaignTemplates } from "./CampaignTemplates";
+import { TemplatesPage } from "./TemplatesPage";
+import type { CardLang } from "./templateParts";
 
 const KINDS = Object.keys(KIND_LABEL) as WaKind[];
 const label = (t: WaTemplate) => (t.kind === "nurture" ? `After YES · ${TRACK_LABEL[t.track ?? ""]} · day ${t.day ?? 0}` : KIND_LABEL[t.kind]);
@@ -20,48 +22,6 @@ function splitText(text: string): WaParts {
   const intro = (blocks[0] ?? "").replace(/^\s*(\{\{Greeting\}\}|(Hi|Hello)\s+\{\{FirstName\}\}),?\s*/, "");
   const [problem = "", solution = "", reward = "", cta = "", ...rest] = blocks.slice(1);
   return { intro: intro || INTRO, problem, solution, reward, cta, details: rest.join("\n") };
-}
-
-/** The media picker, shared by both editors: cold messages stay text only. */
-export function MediaPicker({ t, cold, file, setFile, drop, setDrop }: {
-  t: WaTemplate; cold: boolean; file: File | null; setFile: (f: File | null) => void; drop: boolean; setDrop: (d: boolean) => void;
-}): ReactElement {
-  const [problem, setProblem] = useState("");
-  const kept = drop ? null : t.media ?? null;
-  const showing = !cold && (file || kept);
-  const pick = (picked: File | undefined) => {
-    if (!picked) return;
-    const why = mediaProblem(picked);
-    setProblem(why);
-    if (!why) {
-      setFile(picked);
-      setDrop(false);
-    }
-  };
-  if (cold) {
-    return <span className="k">{KIND_LABEL[t.kind]} goes to people who haven’t replied, so it stays text only: to a stranger, a picture or video looks like spam. Put the creative idea above and use it on the reply.{t.media && !drop ? " Its saved file will be removed when you save." : ""}</span>;
-  }
-  return (
-    <>
-      {showing ? (
-        <div className="wa-mfile">
-          <span>{file ? `${file.name} · ${sizeText(file.size)}` : `${kept?.name} · ${sizeText(kept?.size ?? 0)}`}</span>
-          <div className="fr">
-            <label className="btn sm">Replace<input className="sr" type="file" accept={MEDIA_ACCEPT} onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} /></label>
-            <button type="button" className="btn sm" onClick={() => { setFile(null); setDrop(true); setProblem(""); }}>Remove</button>
-          </div>
-        </div>
-      ) : (
-        <label className="wa-mdrop">
-          <input className="sr" type="file" accept={MEDIA_ACCEPT} aria-label="Choose a picture or video" onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} />
-          <b>Add the creative: a picture or video</b>
-          <span className="k">JPG, PNG or WebP up to 5 MB · MP4 or MOV up to 9 MB</span>
-        </label>
-      )}
-      {problem ? <span className="aferr" role="alert">{problem}</span> : null}
-      {showing ? <span className="k">WhatsApp links carry text only. When you send this, Today shows the {mediaWord(file ? (file.type.startsWith("video") ? "video" : "image") : kept?.kind ?? "image")} to paste or attach in the chat.</span> : null}
-    </>
-  );
 }
 
 function Editor({ t, templates, onClose, onSaved }: { t: WaTemplate; templates: WaTemplate[]; onClose: () => void; onSaved: () => void }): ReactElement {
@@ -177,22 +137,18 @@ function Editor({ t, templates, onClose, onSaved }: { t: WaTemplate; templates: 
   );
 }
 
-export function TemplatesTab({ templates, reload }: { templates: WaTemplate[]; reload: () => void }): ReactElement {
-  const campaign = templates.filter((t) => t.category);
+/** Templates: the campaign's message cards (TemplatesPage), with the older templates one click away in its menu. */
+export function TemplatesTab({ templates, contacts, reload, lang, newTick }: {
+  templates: WaTemplate[]; contacts: WaContact[]; reload: () => void; lang: CardLang; newTick: number;
+}): ReactElement {
   const older = templates.filter((t) => !t.category && !t.archived);
-  const [showOlder, setShowOlder] = useState(campaign.length === 0);
-  const toggle = (
-    <div className="seg" role="tablist" aria-label="Which templates">
-      <button type="button" role="tab" aria-selected={!showOlder} className={!showOlder ? "on" : ""} onClick={() => setShowOlder(false)}>90-day campaign · {campaign.length}</button>
-      <button type="button" role="tab" aria-selected={showOlder} className={showOlder ? "on" : ""} onClick={() => setShowOlder(true)}>Older templates · {older.length}</button>
-    </div>
+  return (
+    <TemplatesPage templates={templates} contacts={contacts} reload={reload} lang={lang} newTick={newTick} olderCount={older.length}
+      older={<OlderTemplates templates={older} reload={reload} />} />
   );
-  return showOlder
-    ? <OlderTemplates templates={older} reload={reload} toggle={toggle} />
-    : <CampaignTemplates templates={campaign} reload={reload} toggle={toggle} />;
 }
 
-function OlderTemplates({ templates, reload, toggle }: { templates: WaTemplate[]; reload: () => void; toggle: ReactElement }): ReactElement {
+function OlderTemplates({ templates, reload }: { templates: WaTemplate[]; reload: () => void }): ReactElement {
   const toast = useToast();
   const [kind, setKind] = useState<WaKind | "">("");
   const [lang, setLang] = useState<WaLanguage | "">("");
@@ -201,7 +157,6 @@ function OlderTemplates({ templates, reload, toggle }: { templates: WaTemplate[]
   const rows = templates.filter((t) => (!kind || t.kind === kind) && (!lang || (t.language ?? "en") === lang)).sort((a, b) => (a.kind === "nurture" && b.kind === "nurture" ? (a.day ?? 0) - (b.day ?? 0) : 0));
   return (
     <>
-      {toggle}
       <div className="fr between">
         <div className="fr" role="group" aria-label="Type">
           <button type="button" className={"chip" + (kind === "" ? " on" : "")} onClick={() => setKind("")}>All</button>
