@@ -38,6 +38,13 @@ export interface WaContact {
   campaign_name: string;
   phone: string;
   first_name: string;
+  /** Who decides, when it isn't the contact: {{OwnerName}} (wa2 backend; older servers leave it out). */
+  owner_name?: string;
+  /** The "how we know them" line fill() writes, when the server sends it (else the page reads info.how_we_know). */
+  how_we_know?: string;
+  /** Which details an If finds known for this contact (wa_conditions.known), on the wa2 server. */
+  known?: Partial<Record<"FirstName" | "OwnerName" | "Business" | "City" | "HowWeKnow", boolean>>;
+  salutation_hi?: string;
   firm: string;
   segment: string;
   country: string;
@@ -174,6 +181,54 @@ export interface WaTemplate {
   archived?: boolean;
   draft?: boolean;
   performance?: { sends: number; replies: number; next: number } | null;
+  /** The Templates page (wa2): the template's tags; send `tag_ids` to change them. */
+  tags?: WaTag[];
+  tag_ids?: number[];
+  /** Last 30 days of this row's own sends (version A's numbers when a B is being tested). The wa2 server puts these
+   * keys (WaNumbers) on the template itself; `stats` is read too. Older servers send only `performance`. */
+  stats?: WaNumbers | null;
+  stats_days?: number;
+  /** The A/B test: version B's texts and numbers, or null. A B row itself has `version_of` and is never a card. */
+  version_b?: WaVersionB | null;
+  version_of?: number | null;
+}
+
+/** A label staff put on templates. `color` is from the server's fixed palette. */
+export interface WaTag {
+  id: number;
+  name: string;
+  color: string;
+}
+
+/** Sends and replies over the last 30 days; rates are whole percents. _en / _hi: by the language it went out in. */
+export interface WaNumbers {
+  sends: number;
+  replies: number;
+  reply_rate?: number;
+  next?: number;
+  next_rate?: number;
+  sends_en?: number;
+  replies_en?: number;
+  reply_rate_en?: number;
+  sends_hi?: number;
+  replies_hi?: number;
+  reply_rate_hi?: number;
+}
+
+export interface WaVersionB extends WaNumbers {
+  id: number;
+  name?: string;
+  text: string;
+  text_hi: string;
+  draft?: boolean;
+}
+
+/** How many contacts (not opted out, not blocked) have each detail known, by the same rules as fill(). */
+export interface WaReach {
+  total: number;
+  known: Record<"FirstName" | "OwnerName" | "Business" | "City" | "HowWeKnow", number>;
+  /** Contact ids for the Preview as quick picks: one with a first name, one without, one with no names. */
+  examples?: { first_name: number | null; no_first_name: number | null; no_names: number | null };
 }
 
 export interface WaFileRow {
@@ -298,6 +353,18 @@ export const getWaTemplates = () => request<WaTemplate[]>(`${BASE}/templates/`);
 export const saveWaTemplate = (t: WaTemplate) =>
   t.id ? request<WaTemplate>(`${BASE}/templates/${t.id}/`, { method: "PUT", body: JSON.stringify(t) }) : request<WaTemplate>(`${BASE}/templates/`, post(t));
 export const deleteWaTemplate = (id: number) => request<null>(`${BASE}/templates/${id}/`, { method: "DELETE" });
+/** Starts an A/B test: version B with these texts (one B at a time). */
+export const addWaVersion = (id: number, text: string, text_hi: string) => request<WaTemplate>(`${BASE}/templates/${id}/versions/`, post({ text, text_hi }));
+/** Ends the test: B copies B's texts into A and archives B; A archives B. Both keep their history. */
+export const keepWaVersion = (id: number, version: "A" | "B") => request<WaTemplate>(`${BASE}/templates/${id}/keep/`, post({ version }));
+/** A copy named "<name> (copy)" with the same texts, category, step and tags. */
+export const duplicateWaTemplate = (id: number) => request<WaTemplate>(`${BASE}/templates/${id}/duplicate/`, { method: "POST" });
+/** Some fields only (archived, tag_ids...). */
+export const patchWaTemplate = (id: number, patch: Partial<WaTemplate>) => request<WaTemplate>(`${BASE}/templates/${id}/`, { method: "PATCH", body: JSON.stringify(patch) });
+export const getWaReach = () => request<WaReach>(`${BASE}/templates/reach/`);
+export const getWaTags = () => request<WaTag[]>(`${BASE}/tags/`);
+export const addWaTag = (name: string) => request<WaTag>(`${BASE}/tags/`, post({ name }));
+export const deleteWaTag = (id: number) => request<null>(`${BASE}/tags/${id}/`, { method: "DELETE" });
 export const uploadWaMedia = (id: number, file: File) => {
   const body = new FormData();
   body.append("file", file);
