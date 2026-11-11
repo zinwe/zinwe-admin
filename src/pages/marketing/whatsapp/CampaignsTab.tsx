@@ -348,7 +348,7 @@ export function CampaignEditor({ campaign, templates, audiences, contacts, onSav
           {campaign?.id ? <CampaignContacts campaign={campaign} contacts={contacts} onChanged={onSaved} /> : null}
           <section className="card afsec">
             <h2>Messages and sequence</h2>
-            <label className="fl">Plan <span className="k">90 days: the Outreach templates by day (Templates → 90-day campaign), then Engage, the Track’s Demo videos, Setup, Offer and Testimonial</span>
+            <label className="fl">Plan <span className="k">90 days: the Intro templates by day (Templates → 90-day campaign), then Engage, the Track’s Demo videos, Setup, Offer and Testimonial</span>
               <select className="inp" value={c.plan ?? "touches"} onChange={(e) => set({ plan: e.target.value as WaCampaign["plan"] })}>
                 <option value="touches">First message and up to three touches</option>
                 <option value="ninety">90-day campaign (100 Reviews)</option>

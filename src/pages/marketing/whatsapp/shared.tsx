@@ -23,7 +23,7 @@ export const trackName = (t: WaTrack | undefined): string => (t ? TRACK_LABEL[t]
 
 /** The 90-day campaign (100 Reviews): categories in the order a contact meets them, and each one's types. */
 export const CATEGORY_LABEL: Record<Exclude<WaCategory, "">, string> = {
-  outreach: "Outreach", engage: "Engage", demo_video: "Demo video", setup: "Setup", demo_call: "Demo call",
+  outreach: "Intro", engage: "Engage", demo_video: "Demo video", setup: "Setup", demo_call: "Demo call",
   offer: "Offer & discount", testimonial: "Testimonial", quick_reply: "Quick reply",
 };
 export const CATEGORIES = Object.keys(CATEGORY_LABEL) as Exclude<WaCategory, "">[];
