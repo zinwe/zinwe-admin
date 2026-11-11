@@ -35,7 +35,7 @@ export const NEXT: Partial<Record<Cat, string>> = {
 export const BADGE: Record<Cat, string> = {
   outreach: "OU", engage: "EN", demo_video: "DV", setup: "SU", demo_call: "DC", offer: "OF", testimonial: "TE", quick_reply: "QR",
 };
-/** Steps per category (the backend's rules): Outreach is a day 1–90, Offer a stage 1–3. */
+/** Steps per category (the backend's rules): Intro is a day 1–90, Offer a stage 1–3. */
 export const STEPS: Partial<Record<Cat, number>> = { engage: 6, demo_video: 6, setup: 2, testimonial: 2 };
 
 export const pct = (n: number, d: number): number => (d ? Math.round((n / d) * 100) : 0);

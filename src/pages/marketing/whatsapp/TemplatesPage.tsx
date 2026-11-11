@@ -452,7 +452,7 @@ export function TemplatesPage({ templates, contacts, reload, lang, newTick, olde
             })}
           </div>
         ) : <div className="wt-empty">{needle ? "No template matches that search." : "No templates here yet. Pick another category or tag, or make a new one."}</div>}
-        <div className="wt-foot">Replies = replies ÷ sent, last 30 days. The second bar is the step each category is for: YES for Outreach, Paid for Offer, Track set for Engage, Next step for Demo video, Setup and Demo call, Got one for Testimonial. Quick replies answer a message, so they are not scored. The chips beside each category and tag use the same reply rate: green 40 % and up, orange 15–39 %, red under 15 %.</div>
+        <div className="wt-foot">Replies = replies ÷ sent, last 30 days. The second bar is the step each category is for: YES for Intro, Paid for Offer, Track set for Engage, Next step for Demo video, Setup and Demo call, Got one for Testimonial. Quick replies answer a message, so they are not scored. The chips beside each category and tag use the same reply rate: green 40 % and up, orange 15–39 %, red under 15 %.</div>
       </>
     );
   }
