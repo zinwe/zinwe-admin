@@ -1,14 +1,18 @@
 import { useState, type ReactElement } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ConfirmDialog } from "../../../components/ConfirmDialog";
-import { Modal } from "../../../components/Modal";
+import { LoadingState } from "../../../components/States";
 import { useToast } from "../../../components/Toast";
 import type { Audience } from "../../../lib/marketingApi";
 import {
-  addToWaCampaign, deleteWaCampaign, saveWaCampaign, waCampaignAction,
+  deleteWaCampaign, saveWaCampaign, waCampaignAction,
   type WaCampaign, type WaContact, type WaGoal, type WaKind, type WaStats, type WaTemplate,
 } from "../../../lib/whatsappApi";
 import { claudeCommand, OUTREACH_SKILL } from "./claudeCommand";
+import { ContactPicker } from "./campaigns/ContactPicker";
+import { NewPathCampaign, PathBuilder } from "./campaigns/PathBuilder";
+import { PathList } from "./campaigns/PathList";
+import { usePathApi } from "./campaigns/usePathApi";
 import { Bubble, errText, sampleText } from "./shared";
 
 /** The saved campaign as a prompt for Claude in Chrome: copy it, paste it, and Claude runs today's round. */
@@ -119,7 +123,7 @@ function CampaignRow({ c, templates }: { c: WaCampaign; templates: WaTemplate[] 
  * now, filters, then each audience's campaigns as rows that show the message, who it reaches, how far it got, and
  * the one next step.
  */
-export function CampaignList({ campaigns, templates }: { campaigns: WaCampaign[]; templates: WaTemplate[] }): ReactElement {
+function SlotsCampaignList({ campaigns, templates }: { campaigns: WaCampaign[]; templates: WaTemplate[] }): ReactElement {
   const [filter, setFilter] = useState<Filter>("all");
   if (!campaigns.length) {
     return (
@@ -177,74 +181,6 @@ export function CampaignList({ campaigns, templates }: { campaigns: WaCampaign[]
   );
 }
 
-/** Pick contacts to add to this campaign: unassigned first, or move ones from another campaign that haven't been messaged. */
-function ContactPicker({ campaign, contacts, onClose, onAdded }: { campaign: WaCampaign; contacts: WaContact[]; onClose: () => void; onAdded: () => void }): ReactElement {
-  const toast = useToast();
-  const [from, setFrom] = useState<"free" | "other">("free");
-  const [seg, setSeg] = useState("");
-  const [q, setQ] = useState("");
-  const [picked, setPicked] = useState<Set<number>>(new Set());
-  const [busy, setBusy] = useState(false);
-  const movable = (c: WaContact) => c.step === 0 && !c.yes_date && c.status !== "stop" && c.campaign !== campaign.id;
-  const pool = contacts.filter((c) => movable(c) && (from === "free" ? !c.campaign : !!c.campaign));
-  const segments = [...new Set(pool.map((c) => c.segment))].sort();
-  const needle = q.trim().toLowerCase();
-  const rows = pool.filter((c) => (!seg || c.segment === seg) && (!needle || `${c.firm} ${c.phone} ${c.city}`.toLowerCase().includes(needle)));
-  const all = rows.length > 0 && rows.every((c) => picked.has(c.id));
-  const toggle = (id: number) => setPicked((p) => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-  const add = async () => {
-    setBusy(true);
-    try {
-      const r = await addToWaCampaign(campaign.id as number, [...picked]);
-      toast(`${r.added} contact${r.added === 1 ? "" : "s"} added${r.skipped ? `, ${r.skipped} skipped (already messaged or stopped)` : ""}. Nothing was sent.`);
-      onAdded();
-      onClose();
-    } catch (err) {
-      toast(errText(err, "Couldn't add them."), "bad");
-      setBusy(false);
-    }
-  };
-  return (
-    <Modal title={`Add contacts to ${campaign.name}`} subtitle="Only contacts who haven’t had a message yet can join. Nothing is sent now." onClose={onClose}
-      footer={<><button type="button" className="btn" onClick={onClose}>Cancel</button><button type="button" className="btn dark" disabled={busy || !picked.size} onClick={() => void add()}>{picked.size ? `Add ${picked.size} contact${picked.size === 1 ? "" : "s"}` : "Pick contacts"}</button></>}>
-      <div className="mk wa-picker">
-        <div className="seg" role="tablist" aria-label="From">
-          <button type="button" role="tab" aria-selected={from === "free"} className={from === "free" ? "on" : ""} onClick={() => { setFrom("free"); setPicked(new Set()); }}>Not in a campaign <span className="k">{contacts.filter((c) => movable(c) && !c.campaign).length}</span></button>
-          <button type="button" role="tab" aria-selected={from === "other"} className={from === "other" ? "on" : ""} onClick={() => { setFrom("other"); setPicked(new Set()); }}>From other campaigns <span className="k">{contacts.filter((c) => movable(c) && !!c.campaign).length}</span></button>
-        </div>
-        <div className="fr">
-          <select className={"inp" + (seg ? " set" : "")} aria-label="Segment" value={seg} onChange={(e) => setSeg(e.target.value)}>
-            <option value="">All segments</option>
-            {segments.map((x) => <option key={x}>{x}</option>)}
-          </select>
-          <input type="search" className="inp" aria-label="Search" placeholder="Search business, phone or city" value={q} onChange={(e) => setQ(e.target.value)} />
-        </div>
-        <div className="scroll wa-picker__list">
-          <table className="tbl">
-            <thead><tr>
-              <th scope="col"><input type="checkbox" aria-label="Pick all shown" checked={all} onChange={() => setPicked((p) => { const n = new Set(p); rows.forEach((c) => (all ? n.delete(c.id) : n.add(c.id))); return n; })} /></th>
-              <th scope="col">Business</th><th scope="col">Segment</th><th scope="col">{from === "free" ? "City" : "Now in"}</th><th scope="col">Opt-in</th>
-            </tr></thead>
-            <tbody>
-              {rows.slice(0, 300).map((c) => (
-                <tr key={c.id} className="click" onClick={() => toggle(c.id)}>
-                  <td><input type="checkbox" aria-label={`Pick ${c.firm}`} checked={picked.has(c.id)} onChange={() => toggle(c.id)} onClick={(e) => e.stopPropagation()} /></td>
-                  <th scope="row">{c.short_name || c.firm}<span className="k" style={{ display: "block" }}>{c.phone}</span></th>
-                  <td>{c.segment}</td>
-                  <td className="k">{from === "free" ? c.city : c.campaign_name}</td>
-                  <td>{c.opted_in ? <span className="pill good">Opted in</span> : <span className="pill">Not yet</span>}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {rows.length ? null : <div className="empty">{pool.length ? "No contacts match." : from === "free" ? "Every contact is in a campaign. Try From other campaigns." : "No contacts to move."}</div>}
-        </div>
-        <span className="k">{rows.length > 300 ? `Showing 300 of ${rows.length}: search or pick a segment to narrow it. ` : ""}Contacts already messaged stay in their campaign, so nobody gets two first messages.</span>
-      </div>
-    </Modal>
-  );
-}
-
 /** The campaign's contacts: how many, opted in, ready, and the way to add more by hand. */
 function CampaignContacts({ campaign, contacts, onChanged }: { campaign: WaCampaign; contacts: WaContact[]; onChanged: () => void }): ReactElement {
   const [picking, setPicking] = useState(false);
@@ -272,14 +208,17 @@ const blank = (templates: WaTemplate[]): WaCampaign => {
   return { name: "", audience: null, goal: "Conversations", daily_limit: 15, followup_days: 3, first: pick("first"), followup: pick("followup"), interested: pick("interested"), question: pick("question"), notnow: pick("notnow"), touch3: pick("touch3"), touch4: null, touch3_days: 7, touch4_days: 60 };
 };
 
-/** New campaign and campaign settings: name and goal, target audience, the message sequence, the daily limit. */
-export function CampaignEditor({ campaign, templates, audiences, contacts, onSaved }: {
+interface EditorProps {
   campaign: WaCampaign | null;
   templates: WaTemplate[];
   audiences: Audience[];
   contacts: WaContact[];
   onSaved: () => void;
-}): ReactElement {
+}
+
+/** New campaign and campaign settings on the older plan ("slots"): name and goal, target audience, the message
+ * sequence, the daily limit. Unchanged since before paths; `older` adds one line saying so. */
+function SlotsCampaignEditor({ campaign, templates, audiences, contacts, onSaved, older }: EditorProps & { older?: boolean }): ReactElement {
   const toast = useToast();
   const navigate = useNavigate();
   const [c, setC] = useState<WaCampaign>(campaign ?? blank(templates));
@@ -306,6 +245,7 @@ export function CampaignEditor({ campaign, templates, audiences, contacts, onSav
   return (
     <>
       <Link className="lnk afback" to="/marketing/whatsapp/campaigns">Back to campaigns</Link>
+      {older && campaign ? <p className="k">This campaign runs on the older plan: a first message and up to three touches. It keeps running as it is until it is converted to a path.</p> : null}
       {campaign ? (
         <section className="check">
           <div>
@@ -413,4 +353,30 @@ export function CampaignEditor({ campaign, templates, audiences, contacts, onSav
       ) : null}
     </>
   );
+}
+
+/**
+ * Campaigns list (wa3, 11 Nov 2026): the step-by-step path view when the server has campaign paths, else the older
+ * list, unchanged. `onChanged` reloads the page's data (after Duplicate).
+ */
+export function CampaignList({ campaigns, templates, onChanged }: { campaigns: WaCampaign[]; templates: WaTemplate[]; onChanged?: () => void }): ReactElement {
+  const api = usePathApi(campaigns);
+  if (api.on === undefined) return <LoadingState />;
+  return api.on ? <PathList campaigns={campaigns} templates={templates} onChanged={onChanged} /> : <SlotsCampaignList campaigns={campaigns} templates={templates} />;
+}
+
+/**
+ * One campaign: the path builder when its engine is "path"; the older editor for "slots" (and on a server without
+ * paths). New: pick a ready path on a server with paths, else the older form.
+ */
+export function CampaignEditor(props: EditorProps): ReactElement {
+  const { campaign } = props;
+  const api = usePathApi(campaign ? [campaign] : []);
+  const [noPath, setNoPath] = useState(false);
+  if (campaign && (campaign.engine !== "path" || noPath)) return <SlotsCampaignEditor {...props} older={!!api.on || campaign.engine === "slots"} />;
+  if (!campaign) {
+    if (api.on === undefined) return <LoadingState />;
+    return api.on ? <NewPathCampaign base={blank(props.templates)} onSaved={props.onSaved} /> : <SlotsCampaignEditor {...props} />;
+  }
+  return <PathBuilder campaign={campaign} templates={props.templates} audiences={props.audiences} contacts={props.contacts} onSaved={props.onSaved} onNoPath={() => setNoPath(true)} />;
 }
