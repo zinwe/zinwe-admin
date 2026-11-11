@@ -403,6 +403,104 @@ export async function fetchWaMedia(url: string): Promise<Blob> {
 
 export const getWaAnalytics = () => request<WaAnalytics>(`${BASE}/analytics/`);
 
+// ---- wa3 campaign paths (Campaigns tab: the step-by-step builder) ------------------------------------------------
+// The contract in _wa3/BRIEF.md. A campaign whose `engine` is "path" runs `path`; "slots" (and an older server that
+// sends no `engine`) runs the first/follow-up/touch fields above, unchanged.
+export type WaEngine = "slots" | "path";
+export type WaLane = "main" | "yes" | "notnow" | "stop";
+export type WaStepKind = "start" | "send" | "wait" | "reply" | "track" | "group" | "goal" | "goto" | "end";
+export type WaUnit = "hours" | "days" | "weeks";
+export type WaPathGoal = "yes" | "signup" | "first_pc" | "paid";
+export type WaEndStatus = "no_reply" | "opted_out" | "done";
+
+/** One step. Only the fields of its kind are set (see the brief's table). */
+export interface WaPathStep {
+  id: string;
+  k: WaStepKind;
+  /** send: the WaTemplate id; only_if "no_pc" = only when they have no PC connected yet. */
+  template?: number | null;
+  only_if?: "" | "no_pc";
+  /** wait, reply: how long. window = only Mon–Sat 10:00–19:00 (a send due on a Sunday moves to Monday). */
+  n?: number;
+  unit?: WaUnit;
+  window?: boolean;
+  /** group: the next `count` unsent templates of the category in path order, one every `every` days. */
+  category?: "outreach" | "demo_video";
+  count?: number;
+  every?: number;
+  goal?: WaPathGoal;
+  /** goto: a lane and a step id there, or step "resume" = back where they left the main lane. */
+  lane?: WaLane;
+  step?: string;
+  /** end: what they leave as. */
+  label?: string;
+  note?: string;
+  status?: WaEndStatus;
+}
+export interface WaPath {
+  v: 1;
+  lanes: Record<WaLane, WaPathStep[]>;
+}
+export interface WaStepStats {
+  here: number;
+  sent: number;
+  replies: number;
+  reply_rate: number;
+}
+/** A validation problem from the server: a sentence, or one tied to a step. */
+export type WaPathIssue = string | { lane?: WaLane; step?: string; message?: string; detail?: string };
+export interface WaPathInfo {
+  path: WaPath;
+  engine: WaEngine;
+  stats: Record<string, WaStepStats>;
+  issues: WaPathIssue[];
+}
+export interface WaPathSummary {
+  steps: number;
+  days: number;
+  lanes: number;
+}
+export interface WaPreset {
+  key: "100_reviews" | "short" | "blank";
+  name: string;
+  path: WaPath;
+}
+/** One step's day and real date for a contact, by the real window rule. moved_from: "Sun 22 Nov" when moved. */
+export interface WaScheduleRow {
+  step_id: string;
+  day: number;
+  date: string;
+  moved_from: string | null;
+}
+/** Merged into WaCampaign above: what GET /campaigns/ adds for path campaigns (all optional on an older server). */
+export interface WaCampaign {
+  engine?: WaEngine;
+  path_summary?: WaPathSummary;
+  /** Only if the list sends it; the builder reads GET /campaigns/<id>/path/. */
+  path?: WaPath;
+  contacts?: number;
+  sent?: number;
+  replies?: number;
+  reply_rate?: number;
+  yes?: number;
+  paid?: number;
+  /** Day N of the campaign while it runs, when the server sends it. */
+  day?: number;
+}
+
+export const getWaPath = (id: number) => request<WaPathInfo>(`${BASE}/campaigns/${id}/path/`);
+/** On a live campaign, people at a removed step move to the next one: `moved` says how many. */
+export const putWaPath = (id: number, path: WaPath) =>
+  request<Partial<WaPathInfo> & { moved?: number }>(`${BASE}/campaigns/${id}/path/`, { method: "PUT", body: JSON.stringify({ path }) });
+export const getWaSchedule = (id: number, contact?: number) =>
+  request<WaScheduleRow[]>(`${BASE}/campaigns/${id}/schedule/${contact ? `?contact=${contact}` : ""}`);
+/** 404 on a server without paths: the tab then shows the older campaign view. */
+export const getWaPresets = () => request<WaPreset[]>(`${BASE}/campaigns/presets/`);
+/** A new path campaign from a preset (the server builds its path). */
+export const createWaPathCampaign = (c: WaCampaign, preset: WaPreset["key"]) =>
+  request<WaCampaign>(`${BASE}/campaigns/`, post({ ...c, engine: "path", preset }));
+// ---- end wa3 campaign paths -----------------------------------------------------------------------------------------
+
 /** Opens the chat on WhatsApp (phone app or WhatsApp Web) with the text filled in. The person presses Send there. */
 export function waLink(phone: string, text: string): string {
   return `https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(text)}`;
