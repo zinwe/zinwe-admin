@@ -29,7 +29,7 @@ export const CATEGORY_LABEL: Record<Exclude<WaCategory, "">, string> = {
 export const CATEGORIES = Object.keys(CATEGORY_LABEL) as Exclude<WaCategory, "">[];
 export const TRACKED: WaCategory[] = ["engage", "demo_video"];
 export const CATEGORY_TYPES: Record<Exclude<WaCategory, "">, string[]> = {
-  outreach: ["Intro", "Problem", "Value", "Question", "Season or event", "Offer", "Discount"],
+  outreach: ["Opener", "Problem", "Value", "Question", "Season or event", "Offer", "Discount"],
   engage: ["Need discovery", "Qualification question", "Track confirmation"],
   demo_video: ["Overview video", "Feature clip", "Recap and next step"],
   setup: ["Registration steps", "Incomplete-setup nudge"],
