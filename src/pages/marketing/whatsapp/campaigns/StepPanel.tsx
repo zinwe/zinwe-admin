@@ -119,7 +119,7 @@ export function StepPanel(props: {
             </div>
             <span className="wf-help">Templates are written in the Templates tab. A change there shows here too.</span>
           </div>
-          {t && isDraft(t) ? <div className="wf-box is-warn"><b>This template is a draft.</b>Write its English and Hinglish in Templates before day 1. Until then this step is skipped and the wait goes on.</div> : null}
+          {t && isDraft(t) ? <div className="wf-box is-warn"><b>This template is a draft.</b>Write its English and Hinglish in Templates. Until then nobody gets it: contacts wait at this step.</div> : null}
           {shown && t ? (
             <div className="wf-col-f">
               <div className="wf-rowh">

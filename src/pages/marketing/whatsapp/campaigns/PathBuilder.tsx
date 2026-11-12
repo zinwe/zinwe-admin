@@ -361,7 +361,7 @@ export function PathBuilder({ campaign, templates, audiences, contacts, onSaved,
         const cat = t?.category ? CATEGORY_LABEL[t.category as Cat].toUpperCase() : t ? "OLDER" : "";
         return {
           ...v, cls: "wf-node" + (t ? "" : " is-empty"), k: `SEND${cat ? ` · ${cat}` : ""}`, title: t ? t.type_name || t.name : "Pick a template", sub: t && t.type_name ? t.name : undefined,
-          day: lab?.day, prev: !t ? "Click to pick a template from any category." : draft ? "Draft: not written yet. Write it in Templates; until then this step is skipped." : textFor(t, who, campLang).text,
+          day: lab?.day, prev: !t ? "Click to pick a template from any category." : draft ? "Draft: not written yet. Write it in Templates; contacts wait here until then." : textFor(t, who, campLang).text,
           prevDraft: draft, cond: s.only_if === "no_pc" ? "Only if no PC yet" : undefined,
           foot: x && (x.sent > 0 || here > 0) ? (x.sent ? `${x.sent} sent · ${x.reply_rate} % replied` : "Not sent yet") : undefined,
         };
@@ -445,7 +445,6 @@ export function PathBuilder({ campaign, templates, audiences, contacts, onSaved,
   const act = () => {
     if (st === "live") { setConfirm("pause"); return; }
     if (issues.length) { toast(`Fix ${issues.length === 1 ? "one thing" : `${issues.length} things`} on the path first: ${issues[0].text}`, "bad"); return; }
-    if (drafts) { toast(`${drafts} ${drafts === 1 ? "step uses a draft template" : "steps use draft templates"}. Write them in Templates first, or remove those steps.`, "bad"); return; }
     if (dirty) { toast("Saving your last change. Try again in a moment.", "bad"); return; }
     setConfirm("start");
   };
@@ -564,10 +563,10 @@ export function PathBuilder({ campaign, templates, audiences, contacts, onSaved,
             const next = await waCampaignAction(id, confirm);
             setCamp((c) => ({ ...c, ...next }));
             onSaved();
-            toast(confirm === "pause" ? "Paused. Nobody gets a message until you resume. Replies still show on Today." : st === "paused" ? "Live again. Everyone goes on from the step they were at." : "Live. The first messages appear in Today for you to send.");
+            toast(confirm === "pause" ? "Paused. Nobody gets a message until you resume. Replies still show on Today." : st === "paused" ? "Live again. Everyone goes on from the step they were at." : "Started. The first messages appear in Today for you to send.");
           }}
         >
-          {confirm === "start" ? "Nothing is sent automatically. Each day’s messages appear in Today for you to send yourself." : confirm === "pause" ? "Replies still appear in Today. No new messages from this path will." : "The campaign is removed. Its contacts stay in Contacts."}
+          {confirm === "start" ? `Nothing is sent automatically. Each day’s messages appear in Today for you to send yourself.${drafts ? ` ${drafts} ${drafts === 1 ? "step uses a draft template" : "steps use draft templates"}: a draft is never sent, and contacts wait at it until you write it in Templates.` : ""}` : confirm === "pause" ? "Replies still appear in Today. No new messages from this path will." : "The campaign is removed. Its contacts stay in Contacts."}
         </ConfirmDialog>
       ) : null}
     </div>
