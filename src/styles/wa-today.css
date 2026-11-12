@@ -1,0 +1,72 @@
+/* Marketing -> WhatsApp -> Today (wa4, 12 Nov 2026): one WhatsApp card per contact, in one column, as on the approved
+   board (wa-proposals/today). Built on the Templates look (wa-templates.css: wt- / wc-); only Today's own parts are
+   here (wtd-). Black and greys, white surfaces, hairlines; orange only for small dots, focus and counts that wait. */
+
+.wtd-list { display: flex; flex-direction: column; gap: 16px; padding: 18px 22px; }
+.wtd-card { overflow: visible; }
+.wtd-card.is-later { opacity: .78; }
+.wtd-card .wc-chat { min-height: 0; padding-bottom: 12px; }
+.wtd-step { display: inline-flex; align-items: center; gap: 6px; max-width: 46%; height: 24px; padding: 0 9px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); font-size: 12px; font-weight: 600; color: var(--ink-2); white-space: nowrap; flex: none; overflow: hidden; text-overflow: ellipsis; }
+.wtd-step i { width: 6px; height: 6px; flex: none; border-radius: 50%; background: var(--accent); }
+.wtd-step span { overflow: hidden; text-overflow: ellipsis; }
+
+/* The chat: their message on the left, ours on the right */
+.wtd-in, .wtd-out { max-width: 78%; padding: 7px 9px 6px 10px; font-size: 13.5px; line-height: 19px; color: #111b21; box-shadow: 0 1px .5px rgba(11, 20, 26, .13); white-space: pre-wrap; overflow-wrap: anywhere; }
+.wtd-in { align-self: flex-start; background: var(--surface); border-radius: 2px 10px 10px 10px; }
+.wtd-out { align-self: flex-end; background: #d9fdd3; border-radius: 10px 2px 10px 10px; opacity: .85; }
+.wtd-none { align-self: center; font-size: 12px; color: #54656f; }
+
+/* Claude's read, the sort buttons, what confirming does */
+.wtd-ai { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-top: 1px solid #f0f0f0; }
+.wtd-ail { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); flex-wrap: wrap; }
+.wtd-ail b { color: var(--ink); }
+.wtd-sug { display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 8px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); font-size: 11.5px; font-weight: 600; }
+.wtd-sug::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.wtd-sort { display: flex; gap: 6px; flex-wrap: wrap; }
+.wtd-sort button { min-height: 32px; padding: 0 12px; border: 1px solid var(--line-2); border-radius: 999px; background: var(--surface); font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.wtd-sort button:hover { border-color: var(--ink); color: var(--ink); }
+.wtd-sort button[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--on-ink); }
+.wtd-sort button.is-stop { color: var(--danger); }
+.wtd-sort button.is-stop[aria-pressed="true"] { border-color: var(--danger); background: var(--danger); color: #fff; }
+.wtd-sort button:focus-visible, .wtd-ans textarea:focus, .wtd-from select:focus { outline: 2px solid var(--focus); outline-offset: 1px; }
+.wtd-move { padding: 8px 10px; border-radius: 10px; background: #f7f7f7; font-size: 12.5px; line-height: 18px; color: var(--ink-2); }
+
+/* The answer or message, and the template it came from */
+.wtd-ans { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-top: 1px solid #f0f0f0; }
+.wtd-ai + .wtd-ans { border-top: 0; padding-top: 0; }
+.wtd-ans textarea { width: 100%; box-sizing: border-box; min-height: 84px; field-sizing: content; padding: 9px 11px; border: 1px solid var(--line-2); border-radius: 10px; font: inherit; font-size: 13.5px; line-height: 19px; color: var(--ink); background: var(--surface); resize: vertical; }
+.wtd-from { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-3); flex-wrap: wrap; }
+.wtd-from select { height: 30px; padding: 0 8px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); font: inherit; font-size: 12.5px; font-weight: 600; color: var(--ink); max-width: min(360px, 100%); min-width: 0; }
+.wtd-ans .wa-attach, .wtd-ans .wa-hint { margin-top: 4px; }
+
+/* The card's actions, and the note on the right */
+.wtd-foot { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-top: 1px solid #f0f0f0; flex-wrap: wrap; }
+.wtd-foot .wt-btn[aria-disabled="true"] { pointer-events: none; opacity: .5; }
+.wtd-note { margin-left: auto; font-size: 12px; color: var(--ink-3); text-align: right; }
+.wtd-body { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border-top: 1px solid #f0f0f0; }
+
+/* Empty, Sent today */
+.wtd-done { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 56px 22px; text-align: center; color: var(--ink-3); }
+.wtd-done b { font-size: 16px; color: var(--ink); }
+.wtd-rows { display: flex; flex-direction: column; }
+.wtd-row { display: grid; grid-template-columns: 70px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 22px; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+.wtd-row > span:first-child { color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.wtd-row > span:nth-child(2) { min-width: 0; overflow-wrap: anywhere; }
+.wtd-stats .wtd-next { margin-left: auto; color: var(--ink-3); }
+.wtd-log { padding: 0 22px 18px; }
+.wtd-log .wtx-form { max-width: none; }
+
+/* Phones: the menu folds (wa-templates.css); cards keep one column, actions wrap */
+@container wt (max-width: 760px) {
+  .wtd-list { padding: 14px; }
+  .wtd-row { padding: 10px 14px; grid-template-columns: 52px minmax(0, 1fr); }
+  .wtd-row > span:last-child { grid-column: 2; justify-self: start; }
+  .wtd-log { padding: 0 14px 14px; }
+  .wtd-step { max-width: 100%; }
+  .wtd-card .wc-top { flex-wrap: wrap; }
+  .wtd-card .wc-tt { flex-basis: calc(100% - 48px); }
+  .wtd-in, .wtd-out { max-width: 92%; }
+  .wtd-note { margin-left: 0; text-align: left; flex-basis: 100%; }
+  .wtd-from select { flex: 1 1 200px; }
+  .wtd-stats .wtd-next { margin-left: 0; flex-basis: 100%; }
+}
