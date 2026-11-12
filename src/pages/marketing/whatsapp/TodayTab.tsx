@@ -399,14 +399,19 @@ export function TodayTab({ data, contacts, templates, reload }: { data: WaToday;
   if (view === "all") {
     main = (
       <>
-        <div className="wtx-subh"><h3>Replies to answer</h3><span>{replies.length ? `${replies.length} waiting · answer these first` : "None waiting"}</span></div>
-        {repliesList}
-        <div className="wtx-subh"><h3>Messages to send</h3><span>{queue.length} due: after-YES steps first, then live campaigns</span></div>
-        {queue.length ? <div className="wc-grid">{queue.map((q) => <QueueItem key={`${q.kind}-${q.contact.id}`} q={q} reload={reload} />)}</div>
-          : <div className="wt-empty">Nothing due. Start a campaign in <Link to="/marketing/whatsapp/campaigns">Campaigns</Link>, or add contacts to a live one.</div>}
+        <section aria-labelledby="wtx-replies-h">
+          <div className="wtx-subh"><h3 id="wtx-replies-h">Replies to answer</h3><span>{replies.length ? `${replies.length} waiting · answer these first` : "None waiting"}</span></div>
+          {repliesList}
+        </section>
+        <section aria-labelledby="wtx-queue-h">
+          <div className="wtx-subh"><h3 id="wtx-queue-h">Messages to send</h3><span>{queue.length} due: after-YES steps first, then live campaigns</span></div>
+          {queue.length ? <div className="wc-grid">{queue.map((q) => <QueueItem key={`${q.kind}-${q.contact.id}`} q={q} reload={reload} />)}</div>
+            : <div className="wt-empty">Nothing due. Start a campaign in <Link to="/marketing/whatsapp/campaigns">Campaigns</Link>, or add contacts to a live one.</div>}
+        </section>
+        <div className="wtx-pad"><LogReply contacts={talking} onDone={reload} /></div>
       </>
     );
-  } else if (view === "replies") main = repliesList;
+  } else if (view === "replies") main = <section aria-label="Replies to answer">{repliesList}</section>;
   else if (view === "done") {
     main = done.length ? <div className="wc-grid">{done.map((c) => <DoneCard key={c.id} c={c} />)}</div>
       : <div className="wt-empty">{data.sent_today ? `${data.sent_today} marked as sent today.` : "Nothing sent yet today."}</div>;
