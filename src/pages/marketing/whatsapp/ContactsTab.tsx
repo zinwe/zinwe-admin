@@ -587,15 +587,15 @@ export function ContactsTab({ contacts: all, campaigns, templates, reload }: { c
                   <th scope="row"><button type="button" className="cobtn wtx-ell" title={c.firm} onClick={(e) => { e.stopPropagation(); setOpen(c.id); }}>{c.short_name || c.firm}</button><span className="k wtx-ell">{c.salutation ?? `Hi ${c.greet_as}`} · {c.city}</span></th>
                   <td className="num c-opt c-wide">{c.phone}</td>
                   <td className="c-opt c-wide"><span className="wtx-ell" title={c.segment}>{c.segment}</span></td>
-                  <td className="c-trk">{c.plan === "ninety" || c.track ? <span className={"pill" + (c.track ? "" : " wa-todo")}>{trackName(c.track)}</span> : <span className="k">—</span>}</td>
+                  <td className="c-trk">{c.plan === "ninety" || c.track ? <span className={"pill wtx-trk" + (c.track ? "" : " wa-todo")} title={trackName(c.track)}>{trackName(c.track)}</span> : <span className="k">—</span>}</td>
                   <td>{!c.opted_in ? <span className="pill" title="Locked until they opt in">Not opted in</span> : c.plan === "ninety" ? <CampaignPill s={c.campaign_status} /> : <WaPill s={c.status as WaStatus} />}</td>
                   <td className="c-opt">{c.step_label ? <span className="wtx-ell" title={`${c.step_label}${c.next_due ? ` · next due ${when(c.next_due)}` : ""}`}>{c.step_label}</span> : c.day ? <span className="num">{c.day} · S{c.stage}</span> : <span className="k">—</span>}</td>
                   <td className="c-opt">{c.campaign_name ? <span className="wtx-ell" title={c.campaign_name}>{c.campaign_name}</span> : <span className="k">None</span>}</td>
                   <td className="k c-opt c-wide">{c.last ? `${c.last.kind === "theirs" ? "They wrote" : "Sent"} ${when(c.last.at)}` : WA_STATUS[c.status][0]}</td>
                   <td className="wa-sendcell">
-                    <button type="button" className="wt-btn" disabled={!c.opted_in || c.status === "stop"}
+                    <button type="button" className="wt-btn" aria-label="Send WhatsApp" disabled={!c.opted_in || c.status === "stop"}
                       title={c.status === "stop" ? "Asked to stop: never message them" : !c.opted_in ? "Not opted in yet: mark them opted in first" : undefined}
-                      onClick={(e) => { e.stopPropagation(); setSending(c); }}>Send WhatsApp</button>
+                      onClick={(e) => { e.stopPropagation(); setSending(c); }}>Send</button>
                   </td>
                 </tr>
               ))}

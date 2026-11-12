@@ -53,15 +53,16 @@ textarea.wtx-edit:focus { outline: 2px solid var(--focus); outline-offset: 1px; 
 /* Contacts: dense rows */
 .wtx-tablebox { overflow-x: auto; }
 .mk .tbl.wtx-ctable { min-width: 0; font-size: 13px; }
-.mk .wtx-ctable th, .mk .wtx-ctable td { padding: 9px 10px; }
+.mk .wtx-ctable th, .mk .wtx-ctable td { padding: 9px 8px; }
+.wtx-ctable .pill.wtx-trk { display: inline-block; max-width: 132px; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; line-height: 22px; }
 .mk .wtx-ctable th:first-child, .mk .wtx-ctable td:first-child { padding-left: 22px; }
 .mk .wtx-ctable th:last-child, .mk .wtx-ctable td:last-child { padding-right: 22px; }
 .wtx-ctable .cobtn { text-align: left; }
 .wtx-ctable .wt-btn { min-height: 30px; padding: 0 10px; font-size: 12.5px; }
 .wtx-ctable .pill { white-space: nowrap; }
 .wtx-ctable th, .wtx-ctable td { white-space: nowrap; }
-.wtx-ell { display: block; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.wtx-ctable th[scope="row"] .wtx-ell { max-width: 210px; }
+.wtx-ell { display: block; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wtx-ctable th[scope="row"] .wtx-ell { max-width: 180px; }
 .wtx-ctable button.wtx-ell { padding: 0; }
 
 /* Analytics: cards */
@@ -107,7 +108,8 @@ textarea.wtx-edit:focus { outline: 2px solid var(--focus); outline-offset: 1px; 
 @container wt (max-width: 760px) {
   .wtx-subh, .wtx-pad, .wtx-cards, .wtx-rules { padding-left: 14px; padding-right: 14px; }
   .wtx-ctable .c-opt, .wtx-ctable .c-trk { display: none; }
-  .wtx-ctable th[scope="row"] .wtx-ell { max-width: 150px; }
+  .wtx-ctable th[scope="row"] .wtx-ell { max-width: 116px; }
+  .mk .wtx-ctable th, .mk .wtx-ctable td { padding: 8px 6px; }
   .mk .wtx-ctable th:first-child, .mk .wtx-ctable td:first-child { padding-left: 14px; }
   .mk .wtx-ctable th:last-child, .mk .wtx-ctable td:last-child { padding-right: 14px; }
   .wtx-window { width: 100%; }
