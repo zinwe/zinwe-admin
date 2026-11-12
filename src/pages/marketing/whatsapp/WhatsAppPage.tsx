@@ -51,8 +51,7 @@ export function WhatsAppPage(): ReactElement {
         ? <ErrorState message="That campaign doesn't exist." />
         : <CampaignEditor key={id} campaign={campaign} templates={templates} audiences={audiences} contacts={contacts} onSaved={reload} />;
     } else if (tab === "contacts") body = <ContactsTab contacts={contacts} campaigns={campaigns} templates={templates} reload={reload} />;
-    // wa3/campaigns adds onChanged: pass onChanged={reload} here once that branch is merged.
-    else if (tab === "campaigns") body = <CampaignList campaigns={campaigns} templates={templates} />;
+    else if (tab === "campaigns") body = <CampaignList campaigns={campaigns} templates={templates} onChanged={reload} />;
     else if (tab === "templates") body = <TemplatesTab templates={templates} contacts={contacts} reload={reload} lang={cardLang} newTick={newTick} />;
     else if (tab === "analytics" && analytics) body = <AnalyticsTab data={analytics} campaigns={campaigns} templates={templates} />;
     else if (tab === "settings") body = <SettingsTab />;
