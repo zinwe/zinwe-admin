@@ -1,0 +1,75 @@
+/* Marketing -> WhatsApp -> Settings (wa4, 12 Nov 2026): the board's settings rows, in the Templates look (wt- / wc-
+   from wa-templates.css). Black and greys on white, hairlines, a touch of orange only for "Not saved yet". */
+
+.wsx-sec { margin: 18px 22px 0; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.wsx-sech { padding: 14px 16px; border-bottom: 1px solid #f0f0f0; }
+.wsx-sech h3 { margin: 0; font-size: 15px; font-weight: 700; }
+.wsx-sech p { margin: 0; font-size: 13px; color: var(--ink-3); }
+
+.wsx-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 340px); gap: 16px; align-items: center; padding: 14px 16px; border-bottom: 1px solid #f0f0f0; }
+.wsx-row:last-child { border-bottom: 0; }
+.wsx-l { display: flex; flex-direction: column; gap: 2px; font-size: 14px; font-weight: 600; color: var(--ink); min-width: 0; }
+.wsx-l small { font-size: 12.5px; font-weight: 400; line-height: 17px; color: var(--ink-3); }
+.wsx-err { font-style: normal; font-size: 12.5px; font-weight: 500; line-height: 17px; color: var(--danger); }
+.wsx-pad { margin: 0; padding: 10px 16px 14px; }
+.wsx-ctl { display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap; min-width: 0; }
+.wsx-ctl input[type="time"], .wsx-ctl input[type="number"], .wsx-ctl input[type="text"], .wsx-ctl select {
+  height: 36px; box-sizing: border-box; padding: 0 10px; border: 1px solid var(--line-2); border-radius: 10px; font: inherit;
+  font-size: 14px; font-weight: 500; color: var(--ink); background: var(--surface);
+}
+.wsx-ctl input:focus-visible, .wsx-ctl select:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; border-color: transparent; }
+.wsx-ctl input[type="number"] { width: 84px; font-variant-numeric: tabular-nums; }
+.wsx-ctl input.wsx-text { width: 100%; max-width: 260px; }
+.wsx-row.is-err .wsx-ctl input, .wsx-row.is-err .wsx-ctl select { border-color: var(--danger); }
+.wsx-to { font-size: 13px; color: var(--ink-3); }
+.wsx-fixed { font-size: 14px; font-weight: 600; }
+.wsx-pilllink { text-decoration: none; }
+.wsx-pilllink:hover { color: var(--ink); background: #ececec; }
+
+/* On / off */
+.wsx-tog { position: relative; width: 42px; height: 24px; flex: none; border: 0; border-radius: 999px; background: var(--line-2); padding: 0; cursor: pointer; }
+.wsx-tog::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .2); transition: left .15s ease; }
+.wsx-tog[aria-checked="true"] { background: var(--ink); }
+.wsx-tog[aria-checked="true"]::after { left: 21px; }
+.wsx-tog:disabled { opacity: .5; cursor: default; }
+.wsx-tog:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* Days */
+.wsx-days { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.wsx-days button { width: 40px; height: 32px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); font: inherit; font-size: 12px; font-weight: 600; color: var(--ink-3); cursor: pointer; }
+.wsx-days button:hover { border-color: var(--ink); color: var(--ink); }
+.wsx-days button[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--on-ink); }
+
+/* Stop words */
+.wsx-chips { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; width: 100%; }
+.wsx-chips span { display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 9px; border-radius: 999px; background: var(--surface-2); font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
+.wsx-chips button { border: 0; background: transparent; font: inherit; font-size: 15px; line-height: 1; color: var(--ink-3); padding: 0 0 1px; cursor: pointer; }
+.wsx-chips button:hover { color: var(--ink); }
+.wsx-add { display: flex; gap: 6px; }
+.wsx-ctl .wsx-add input[type="text"] { width: 160px; }
+
+/* Send slots */
+.wsx-slot { display: grid; grid-template-columns: 90px minmax(0, 1fr) 42px; gap: 12px; align-items: center; padding: 12px 16px; border-bottom: 1px solid #f0f0f0; font-size: 13px; color: var(--ink-2); }
+.wsx-slot:last-of-type { border-bottom: 0; }
+.wsx-slot b { font-size: 14px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.wsx-slot.is-out b, .wsx-slot.is-out span { color: var(--ink-3); }
+
+/* Save */
+.wsx-save { display: flex; align-items: center; gap: 10px; margin: 18px 22px 22px; flex-wrap: wrap; }
+.wsx-save span { font-size: 12.5px; color: var(--ink-3); }
+.wsx-save span.is-dirty { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); font-weight: 500; }
+.wsx-save span.is-dirty::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+
+/* Phones: one column; small controls stay beside their label */
+@container wt (max-width: 760px) {
+  .wsx-sec { margin: 14px 14px 0; }
+  .wsx-save { margin: 14px 14px 18px; }
+  .wsx-row { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .wsx-row.is-tight { grid-template-columns: minmax(0, 1fr) auto; }
+  .wsx-row:not(.is-tight) .wsx-ctl, .wsx-row:not(.is-tight) .wsx-days, .wsx-row:not(.is-tight) .wsx-chips { justify-content: flex-start; }
+  .wsx-ctl input.wsx-text { max-width: none; }
+  .wsx-add { width: 100%; }
+  .wsx-ctl .wsx-add input[type="text"] { flex: 1; width: auto; min-width: 0; }
+  .wsx-slot { grid-template-columns: 64px minmax(0, 1fr) 42px; padding: 12px 14px; }
+  .wsx-days button { width: 38px; }
+}

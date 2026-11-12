@@ -171,7 +171,9 @@ export function NewPathCampaign({ base, onSaved }: { base: WaCampaign; onSaved: 
   const make = async (p: WaPreset) => {
     setBusy(true);
     try {
-      const made = await createWaPathCampaign({ ...base, name: name.trim() || "Untitled campaign" }, p.key);
+      // No daily limit or language: a new campaign takes them from Settings (new people a day, language).
+      const { daily_limit: _limit, language: _lang, ...rest } = base;
+      const made = await createWaPathCampaign({ ...rest, name: name.trim() || "Untitled campaign" } as WaCampaign, p.key);
       toast(p.key === "blank" ? "Draft campaign added. Use + to add the first step." : `Draft campaign added. ${PRESET_TEXT[p.key]?.[1] ?? ""}`);
       onSaved();
       navigate(`/marketing/whatsapp/campaigns/${made.id}`);
