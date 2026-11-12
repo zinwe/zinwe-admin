@@ -34,7 +34,7 @@ export function WhatsAppPage(): ReactElement {
     () => Promise.all([getToday(), getWaContacts(), getWaCampaigns(), getWaTemplates(), getAudiences(), tab === "analytics" ? getWaAnalytics() : Promise.resolve(null)]),
     [tab],
   );
-  const { data, error, pending, reload } = useLoad(load);
+  const { data, error, reload } = useLoad(load);
   const editing = tab === "campaigns" && id;
   // Templates: the Language every card shows (remembered), and New template, both in the header.
   const [cardLang, setCardLang] = useState<CardLang>(readCardLang);
@@ -58,9 +58,11 @@ export function WhatsAppPage(): ReactElement {
     else body = <TodayTab data={today} contacts={contacts} templates={templates} reload={reload} />;
   }
   const count = data ? data[0].queue.length + data[0].replies.length : 0;
+  // As on the boards: today's date over the title, no Refresh (every action reloads what it changed).
+  const dateLine = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Kolkata" }).toUpperCase();
   return (
     <div className="mk wa">
-      <PageHeader title="WhatsApp outreach" subtitle={SUB[tab] ?? SUB.today} onReload={reload} pending={pending}>
+      <PageHeader eyebrow={dateLine} title="WhatsApp" subtitle={SUB[tab] ?? SUB.today}>
         {tab === "templates" ? (
           <>
             <label className="wt-sel">Language

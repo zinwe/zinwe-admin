@@ -12,7 +12,10 @@ export function PageHeader({
   pending,
   children,
   badge,
+  eyebrow,
 }: {
+  /** A small line above the title, e.g. today's date. */
+  eyebrow?: ReactNode;
   title: ReactNode;
   subtitle?: ReactNode;
   onReload?: () => void;
@@ -24,6 +27,7 @@ export function PageHeader({
   return (
     <header className="phead">
       <div className="phead__text">
+        {eyebrow ? <span className="k phead__eyebrow">{eyebrow}</span> : null}
         <h1 className="phead__title">
           {title}
           {badge}

@@ -785,6 +785,10 @@ select.inp {
   gap: 4px;
   max-width: 72ch;
 }
+.phead__eyebrow {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
 .phead__title {
   margin: 0;
   font-size: 26px;
