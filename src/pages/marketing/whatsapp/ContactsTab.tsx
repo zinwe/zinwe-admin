@@ -7,8 +7,12 @@ import {
   actOn, addWaContact, addWaFile, deleteWaContact, downloadWaTemplate, getWaContact, patchWaContact, reviewWaFile,
   type WaCampaign, type WaChoice, type WaContact, type WaFileRow, type WaNewContact, type WaStatus, type WaTrack,
 } from "../../../lib/whatsappApi";
+import type { WaCampaignX, WaContactX } from "../../../lib/whatsappApi.tabs";
 import { CampaignSection } from "./CampaignContact";
-import { Bubble, CampaignPill, CATEGORY_LABEL, errText, KIND_LABEL, nameOf, TRACK_LABEL, TRACKED, trackName, when, WaPill, WA_STATUS } from "./shared";
+import {
+  Bubble, CampaignPill, CATEGORY_LABEL, Count, errText, KIND_LABEL, LANG_LABEL, nameOf, RateChip, SideItem, TRACK_LABEL, TRACKED, TRACKS, trackName, when,
+  WaPill, WA_STATUS, WtShell,
+} from "./shared";
 import { Attach } from "./TodayTab";
 
 /**
@@ -433,7 +437,7 @@ function ContactDrawer({ id, campaigns, onClose, onChanged }: { id: number; camp
 }
 
 const VIEWS: [string, string, (c: WaContact) => boolean][] = [
-  ["all", "All", () => true],
+  ["all", "All contacts", () => true],
   ["locked", "Not opted in", (c) => !c.opted_in],
   ["ready", "Ready", (c) => c.status === "ready" && c.opted_in],
   ["talking", "In conversation", (c) => c.status === "messaged" || c.status === "replied"],
@@ -441,61 +445,166 @@ const VIEWS: [string, string, (c: WaContact) => boolean][] = [
   ["track", "Track to set", (c) => c.plan === "ninety" && !!c.yes_date && !c.track && c.campaign_status !== "paid" && c.campaign_status !== "opted_out"],
   ["stop", "Do not message", (c) => c.status === "stop"],
 ];
+const VIEW_SUB: Record<string, string> = {
+  all: "Everyone you may message", locked: "Locked until they agree", ready: "Opted in, not messaged yet", talking: "Messaged or replied",
+  won: "Their YES, or a signup", track: "YES, Track still Unassigned", stop: "Never again, any campaign",
+};
+type TrackKey = Exclude<WaTrack, ""> | "unassigned";
+const trackKey = (c: WaContact): TrackKey | null => (c.track ? (c.track as TrackKey) : c.plan === "ninety" ? "unassigned" : null);
+/** The contact's language: their first message's (wa3 `lang`), else the campaign's when it has one language. */
+const langOf = (c: WaContactX, camps: Map<number, WaCampaignX>): "en" | "hi" | "" => {
+  if (c.lang === "en" || c.lang === "hi") return c.lang;
+  const l = c.campaign ? camps.get(c.campaign)?.language : undefined;
+  return l === "en" || l === "hi" ? l : "";
+};
+const SEG_SHOWN = 8;
 
-export function ContactsTab({ contacts, campaigns, templates, reload }: { contacts: WaContact[]; campaigns: WaCampaign[]; templates: WaTemplate[]; reload: () => void }): ReactElement {
+export function ContactsTab({ contacts: all, campaigns, templates, reload }: { contacts: WaContact[]; campaigns: WaCampaign[]; templates: WaTemplate[]; reload: () => void }): ReactElement {
+  const contacts = all as WaContactX[];
   const [view, setView] = useState("all");
+  const [camp, setCamp] = useState<number | "none" | null>(null);
+  const [track, setTrack] = useState<TrackKey | null>(null);
   const [seg, setSeg] = useState("");
+  const [lang, setLang] = useState<"en" | "hi" | null>(null);
+  const [allSegs, setAllSegs] = useState(false);
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(0);
   const [adding, setAdding] = useState(false);
   const [sending, setSending] = useState<WaContact | null>(null);
+  const camps = new Map((campaigns as WaCampaignX[]).filter((c) => c.id).map((c) => [c.id as number, c]));
   const test = VIEWS.find((v) => v[0] === view)?.[2] ?? (() => true);
-  const segments = [...new Set(contacts.map((c) => c.segment))].sort();
+  const segCount = new Map<string, number>();
+  contacts.forEach((c) => segCount.set(c.segment, (segCount.get(c.segment) ?? 0) + 1));
+  const segments = [...segCount.keys()].sort();
+  const segRank = [...segCount.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
   const needle = q.trim().toLowerCase();
-  const rows = contacts.filter((c) => test(c) && (!seg || c.segment === seg) && (!needle || `${c.firm} ${c.first_name} ${c.phone} ${c.city}`.toLowerCase().includes(needle)));
+  const rows = contacts.filter((c) => test(c)
+    && (camp === null || (camp === "none" ? !c.campaign : c.campaign === camp))
+    && (!track || trackKey(c) === track)
+    && (!seg || c.segment === seg)
+    && (!lang || langOf(c, camps) === lang)
+    && (!needle || `${c.firm} ${c.first_name} ${c.phone} ${c.city}`.toLowerCase().includes(needle)));
+  const tracked = contacts.some((c) => trackKey(c));
+  const langCount = { en: contacts.filter((c) => langOf(c, camps) === "en").length, hi: contacts.filter((c) => langOf(c, camps) === "hi").length };
+  const filters = [
+    camp !== null ? (camp === "none" ? "No campaign" : camps.get(camp)?.name ?? "Campaign") : "",
+    track ? (track === "unassigned" ? "Track Unassigned" : TRACK_LABEL[track]) : "", seg, lang ? LANG_LABEL[lang] : "",
+  ].filter(Boolean);
+  const viewLabel = VIEWS.find((v) => v[0] === view)?.[1] ?? "All contacts";
+  const title = view === "all" && filters.length === 1 ? filters[0] : viewLabel;
+  const clear = () => { setView("all"); setCamp(null); setTrack(null); setSeg(""); setLang(null); setQ(""); };
+  const optedIn = rows.filter((c) => c.opted_in && c.status !== "stop").length;
+  const messaged = rows.filter((c) => c.step > 0).length;
+  const replied = rows.filter((c) => ["replied", "interested", "signed", "notnow"].includes(c.status)).length;
+  const lead = filters.length && !(view === "all" && filters.length === 1) ? `${filters.join(" · ")}. ` : "";
+  const desc = view === "all" && !filters.length ? "Everyone you may message on WhatsApp. Click a business to open it; Send WhatsApp sends a one-off." : view === "all" ? "" : `${VIEW_SUB[view]}.`;
+
   return (
     <>
-      <section className="card finder" aria-label="Find contacts">
-        <div className="fr">
-          <select className={"inp" + (seg ? " set" : "")} aria-label="Segment" value={seg} onChange={(e) => setSeg(e.target.value)}>
-            <option value="">All segments</option>
-            {segments.map((s) => <option key={s}>{s}</option>)}
-          </select>
-          <div className="search"><input type="search" className="inp" aria-label="Search contacts" placeholder="Search business, name, phone or city" value={q} onChange={(e) => setQ(e.target.value)} /></div>
-          <button type="button" className="btn dark" onClick={() => setAdding(true)}>Add contacts</button>
+      <WtShell label="Contact filters" current={title} side={(close) => {
+        const after = (f: () => void) => () => { f(); close(); };
+        return (
+          <>
+            <button type="button" className="wt-new" onClick={after(() => setAdding(true))}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+              Add contacts
+            </button>
+            <label className="wt-search">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
+              <input type="search" aria-label="Search contacts" placeholder="Search business, name, phone or city" value={q} onChange={(e) => setQ(e.target.value)} />
+            </label>
+            <div className="wt-sec" role="group" aria-label="Show">
+              {VIEWS.map(([k, label, f]) => (
+                <SideItem key={k} on={view === k} onPick={after(() => setView(k))} label={label} sub={VIEW_SUB[k]}
+                  chip={<Count n={contacts.filter(f).length} quiet={k === "all" || k === "ready" || k === "stop"} />} />
+              ))}
+            </div>
+            {campaigns.length ? (
+              <div className="wt-sec" role="group" aria-label="Campaign">
+                <div className="wt-sech"><span>CAMPAIGN</span></div>
+                {(campaigns as WaCampaignX[]).map((x) => {
+                  const n = contacts.filter((c) => c.campaign === x.id).length;
+                  const st = x.stats;
+                  const state = x.status === "live" ? " · Live" : x.status === "paused" ? " · Paused" : x.status ? " · Draft" : "";
+                  return (
+                    <SideItem key={x.id} on={camp === x.id} onPick={after(() => setCamp(camp === x.id ? null : x.id as number))} label={x.name}
+                      sub={`${n} contact${n === 1 ? "" : "s"}${state}`}
+                      chip={<RateChip replied={x.replies ?? st?.replied ?? 0} sent={x.sent ?? st?.messaged ?? 0} />} />
+                  );
+                })}
+                <SideItem on={camp === "none"} onPick={after(() => setCamp(camp === "none" ? null : "none"))} label="No campaign" sub="Waiting for one" chip={<Count n={contacts.filter((c) => !c.campaign).length} quiet />} />
+              </div>
+            ) : null}
+            {tracked ? (
+              <div className="wt-sec" role="group" aria-label="Track">
+                <div className="wt-sech"><span>TRACK</span></div>
+                {([...TRACKS, "unassigned"] as TrackKey[]).map((t) => (
+                  <SideItem key={t} on={track === t} onPick={after(() => setTrack(track === t ? null : t))} label={t === "unassigned" ? "Unassigned" : TRACK_LABEL[t]}
+                    sub={t === "unassigned" ? "100 Reviews, no Track yet" : "From their Engage answer"} chip={<Count n={contacts.filter((c) => trackKey(c) === t).length} quiet={t !== "unassigned"} />} />
+                ))}
+              </div>
+            ) : null}
+            {segments.length ? (
+              <div className="wt-sec" role="group" aria-label="Segment">
+                <div className="wt-sech"><span>SEGMENT</span>{segRank.length > SEG_SHOWN ? <button type="button" aria-expanded={allSegs} onClick={() => setAllSegs((o) => !o)}>{allSegs ? "Fewer" : `All ${segRank.length}`}</button> : null}</div>
+                {(allSegs ? segRank : segRank.slice(0, SEG_SHOWN)).map(([s, n]) => (
+                  <SideItem key={s} on={seg === s} onPick={after(() => setSeg(seg === s ? "" : s))} label={s || "No segment"} chip={<Count n={n} quiet />} />
+                ))}
+                {seg && !allSegs && !segRank.slice(0, SEG_SHOWN).some(([s]) => s === seg) ? <SideItem on onPick={after(() => setSeg(""))} label={seg} chip={<Count n={segCount.get(seg) ?? 0} quiet />} /> : null}
+              </div>
+            ) : null}
+            {langCount.en || langCount.hi ? (
+              <div className="wt-sec" role="group" aria-label="Language">
+                <div className="wt-sech"><span>LANGUAGE</span></div>
+                {(["en", "hi"] as const).map((l) => (
+                  <SideItem key={l} on={lang === l} onPick={after(() => setLang(lang === l ? null : l))} label={LANG_LABEL[l]} sub="First message, or the campaign" chip={<Count n={langCount[l]} quiet />} />
+                ))}
+              </div>
+            ) : null}
+          </>
+        );
+      }}>
+        <div className="wt-head">
+          <div><h2>{title}</h2><p>{lead}{desc}</p></div>
+          <div className="wt-tools">
+            {filters.length || view !== "all" || needle ? <button type="button" className="wt-btn is-ghost" onClick={clear}>Clear filters</button> : null}
+            <button type="button" className="wt-btn is-dark" onClick={() => setAdding(true)}>Add contacts</button>
+          </div>
         </div>
-        <div className="fr" role="group" aria-label="Show">
-          {VIEWS.map(([k, label, f]) => <button key={k} type="button" className={"chip" + (view === k ? " on" : "")} aria-pressed={view === k} onClick={() => setView(k)}>{label} <span className="k">{contacts.filter(f).length}</span></button>)}
+        <div className="wt-stats" aria-label="These contacts">
+          <span><b>{rows.length}</b> of {contacts.length} contacts</span><span>·</span>
+          <span><b>{optedIn}</b> can be messaged</span><span>·</span>
+          <span><b>{messaged}</b> messaged</span><span>·</span>
+          <span>replied</span><RateChip replied={replied} sent={messaged} />
         </div>
-      </section>
-      <section className="card tablebox" aria-label="WhatsApp contacts">
-        <div className="scroll">
-          <table className="tbl">
+        <div className="wtx-tablebox" aria-label="WhatsApp contacts">
+          <table className="tbl wtx-ctable">
             <caption className="sr">WhatsApp contacts</caption>
-            <thead><tr><th scope="col">Business</th><th scope="col">Phone</th><th scope="col">Segment</th><th scope="col">Track</th><th scope="col">Status</th><th scope="col">Day</th><th scope="col">Campaign</th><th scope="col">Latest</th><th scope="col"><span className="sr">Send</span></th></tr></thead>
+            <thead><tr><th scope="col">Business</th><th scope="col" className="c-opt c-wide">Phone</th><th scope="col" className="c-opt c-wide">Segment</th><th scope="col" className="c-trk">Track</th><th scope="col">Status</th><th scope="col" className="c-opt">Day · step</th><th scope="col" className="c-opt">Campaign</th><th scope="col" className="c-opt c-wide">Latest</th><th scope="col"><span className="sr">Send</span></th></tr></thead>
             <tbody>
               {rows.map((c) => (
                 <tr key={c.id} className="click" onClick={() => setOpen(c.id)}>
-                  <th scope="row"><button type="button" className="cobtn" onClick={(e) => { e.stopPropagation(); setOpen(c.id); }}>{c.short_name || c.firm}</button><span className="k" style={{ display: "block" }}>{c.salutation ?? `Hi ${c.greet_as}`} · {c.city}</span></th>
-                  <td className="num">{c.phone}</td>
-                  <td>{c.segment}</td>
-                  <td>{c.plan === "ninety" || c.track ? <span className={"pill" + (c.track ? "" : " wa-todo")}>{trackName(c.track)}</span> : <span className="k">—</span>}</td>
+                  <th scope="row"><button type="button" className="cobtn wtx-ell" title={c.firm} onClick={(e) => { e.stopPropagation(); setOpen(c.id); }}>{c.short_name || c.firm}</button><span className="k wtx-ell">{c.salutation ?? `Hi ${c.greet_as}`} · {c.city}</span></th>
+                  <td className="num c-opt c-wide">{c.phone}</td>
+                  <td className="c-opt c-wide"><span className="wtx-ell" title={c.segment}>{c.segment}</span></td>
+                  <td className="c-trk">{c.plan === "ninety" || c.track ? <span className={"pill wtx-trk" + (c.track ? "" : " wa-todo")} title={trackName(c.track)}>{trackName(c.track)}</span> : <span className="k">—</span>}</td>
                   <td>{!c.opted_in ? <span className="pill" title="Locked until they opt in">Not opted in</span> : c.plan === "ninety" ? <CampaignPill s={c.campaign_status} /> : <WaPill s={c.status as WaStatus} />}</td>
-                  <td className="num">{c.day ? `${c.day} · S${c.stage}` : <span className="k">—</span>}</td>
-                  <td>{c.campaign_name || <span className="k">None</span>}</td>
-                  <td className="k">{c.last ? `${c.last.kind === "theirs" ? "They wrote" : "Sent"} ${when(c.last.at)}` : WA_STATUS[c.status][0]}</td>
+                  <td className="c-opt">{c.step_label ? <span className="wtx-ell" title={`${c.step_label}${c.next_due ? ` · next due ${when(c.next_due)}` : ""}`}>{c.step_label}</span> : c.day ? <span className="num">{c.day} · S{c.stage}</span> : <span className="k">—</span>}</td>
+                  <td className="c-opt">{c.campaign_name ? <span className="wtx-ell" title={c.campaign_name}>{c.campaign_name}</span> : <span className="k">None</span>}</td>
+                  <td className="k c-opt c-wide">{c.last ? `${c.last.kind === "theirs" ? "They wrote" : "Sent"} ${when(c.last.at)}` : WA_STATUS[c.status][0]}</td>
                   <td className="wa-sendcell">
-                    <button type="button" className="btn sm" disabled={!c.opted_in || c.status === "stop"}
+                    <button type="button" className="wt-btn" aria-label="Send WhatsApp" disabled={!c.opted_in || c.status === "stop"}
                       title={c.status === "stop" ? "Asked to stop: never message them" : !c.opted_in ? "Not opted in yet: mark them opted in first" : undefined}
-                      onClick={(e) => { e.stopPropagation(); setSending(c); }}>Send WhatsApp</button>
+                      onClick={(e) => { e.stopPropagation(); setSending(c); }}>Send</button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          {rows.length ? null : <div className="wt-empty">{contacts.length ? "No contacts match." : "No contacts yet. Use Add contacts to type one in or upload a sheet."}</div>}
         </div>
-        {rows.length ? null : <div className="empty">{contacts.length ? "No contacts match." : "No contacts yet. Use Add contacts to type one in or upload a sheet."}</div>}
-      </section>
+        <div className="wt-foot">Segment is the business type, set when they are added. Track is what they want, set from their Engage answer. Every send and reply updates Status, Day and Latest.</div>
+      </WtShell>
       {sending ? <SendModal c={sending} templates={templates} onClose={() => setSending(null)} onSent={reload} /> : null}
       {adding ? <AddContacts campaigns={campaigns} segments={segments} onAdded={reload} onClose={() => setAdding(false)} /> : null}
       {open ? <ContactDrawer id={open} campaigns={campaigns} onClose={() => setOpen(0)} onChanged={reload} /> : null}

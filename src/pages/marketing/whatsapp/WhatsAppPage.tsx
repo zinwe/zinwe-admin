@@ -5,20 +5,23 @@ import { ErrorState, LoadingState } from "../../../components/States";
 import { getAudiences } from "../../../lib/marketingApi";
 import { useLoad } from "../../../lib/useLoad";
 import { getToday, getWaAnalytics, getWaCampaigns, getWaContacts, getWaTemplates } from "../../../lib/whatsappApi";
-import { AnalyticsTab, SettingsTab } from "./AnalyticsTab";
+import { AnalyticsTab } from "./AnalyticsTab";
 import { CampaignEditor, CampaignList } from "./CampaignsTab";
 import { ContactsTab } from "./ContactsTab";
+import { SettingsTab } from "./SettingsTab";
 import { WaTabs } from "./shared";
 import { readCardLang, writeCardLang, type CardLang } from "./templateParts";
 import { TemplatesTab } from "./TemplatesTab";
 import { TodayTab } from "./TodayTab";
 import "../../../styles/marketing.css";
 import "../../../styles/whatsapp.css";
+import "../../../styles/wa-templates.css";
+import "../../../styles/wa-tabs.css";
 
 const SUB: Record<string, string> = {
   today: "Today's replies to answer and messages to send. Zinwe drafts each one; you send it yourself from WhatsApp.",
   contacts: "Everyone you may message on WhatsApp. Add them one at a time or from a sheet, then choose what happens to each contact.",
-  campaigns: "Each campaign sends one message sequence to one target audience from Persona.",
+  campaigns: "A campaign is a path you build step by step: send a template, wait, send the next. When someone replies, they move to the path for that reply.",
   templates: "Every message your team sends is a template. Pick a category or one of your tags; each card shows the message as the contact will read it.",
   analytics: "All WhatsApp campaigns together: what was sent, who replied and what they did next.",
   settings: "How WhatsApp messages leave Zinwe, and the rules every campaign follows.",
@@ -48,9 +51,10 @@ export function WhatsAppPage(): ReactElement {
         ? <ErrorState message="That campaign doesn't exist." />
         : <CampaignEditor key={id} campaign={campaign} templates={templates} audiences={audiences} contacts={contacts} onSaved={reload} />;
     } else if (tab === "contacts") body = <ContactsTab contacts={contacts} campaigns={campaigns} templates={templates} reload={reload} />;
+    // wa3/campaigns adds onChanged: pass onChanged={reload} here once that branch is merged.
     else if (tab === "campaigns") body = <CampaignList campaigns={campaigns} templates={templates} />;
     else if (tab === "templates") body = <TemplatesTab templates={templates} contacts={contacts} reload={reload} lang={cardLang} newTick={newTick} />;
-    else if (tab === "analytics" && analytics) body = <AnalyticsTab data={analytics} />;
+    else if (tab === "analytics" && analytics) body = <AnalyticsTab data={analytics} campaigns={campaigns} templates={templates} />;
     else if (tab === "settings") body = <SettingsTab />;
     else body = <TodayTab data={today} contacts={contacts} templates={templates} reload={reload} />;
   }

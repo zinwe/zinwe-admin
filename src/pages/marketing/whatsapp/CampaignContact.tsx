@@ -5,6 +5,7 @@
 import { type ReactElement } from "react";
 import { useToast } from "../../../components/Toast";
 import { actOn, patchWaContact, type WaAction, type WaCampaignStatus, type WaContact, type WaPack, type WaTrack } from "../../../lib/whatsappApi";
+import { LANE_LABEL, type WaContactX, type WaLane } from "../../../lib/whatsappApi.tabs";
 import { CAMPAIGN_STATUS, errText, suggestTrack, TESTIMONIAL_LABEL, TRACK_LABEL, TRACKS, trackName, when } from "./shared";
 
 const PATH: WaCampaignStatus[] = ["messaged", "replied", "yes", "engaged", "track_assigned", "demo_video_sent", "setup", "demo_call", "offer", "paid"];
@@ -46,12 +47,17 @@ export function CampaignSection({ c, run }: { c: WaContact; run: (work: () => Pr
   const at = PATH.indexOf(status);
   const act = (action: WaAction, done: string) => void run(() => actOn(c.id, action), done);
   const needsTrack = !!c.yes_date && !c.track && status !== "paid" && status !== "opted_out";
+  // wa3 (path campaigns): where they are on the path, when the server sends it.
+  const pos = c as WaContactX;
+  const lane = (pos.lane || "") as WaLane | "";
   return (
     <div className="mk-sec">
       <h3>90-day campaign</h3>
       <dl>
         <dt>Status</dt><dd>{CAMPAIGN_STATUS[status][0]}</dd>
         <dt>Day · stage</dt><dd>{c.day ? `Day ${c.day} of 90 · stage ${c.stage}` : "Not started"}</dd>
+        {pos.step_label ? <><dt>Step</dt><dd>{pos.step_label}{lane ? ` · ${LANE_LABEL[lane] ?? lane}` : ""}</dd></> : null}
+        {pos.next_due ? <><dt>Next due</dt><dd>{new Date(pos.next_due).toLocaleString("en-IN", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</dd></> : null}
         <dt>Track</dt><dd>{trackName(c.track)}</dd>
         <dt>Testimonial</dt><dd>{TESTIMONIAL_LABEL[c.testimonial ?? ""]}{c.using_since ? ` · first PC ${when(c.using_since)}` : ""}</dd>
       </dl>

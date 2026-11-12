@@ -112,6 +112,51 @@ export function WaTabs({ count }: { count?: number }): ReactElement {
   );
 }
 
+/**
+ * The Templates look for the other tabs (wa3): a ChatGPT-style menu on the left (it folds into a button on phones),
+ * the page on the right. `side` gets `close` so a pick on a phone folds the menu again.
+ */
+export function WtShell({ label, current, side, children }: { label: string; current: string; side: (close: () => void) => ReactNode; children: ReactNode }): ReactElement {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="wt-wrap wtx">
+      <div className="wt-in">
+        <aside className={"wt-side" + (open ? " is-open" : "")} aria-label={label}>
+          <button type="button" className="wt-sidetoggle" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+            <span>{current}</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true"><path d={open ? "m6 15 6-6 6 6" : "m6 9 6 6 6-6"} /></svg>
+          </button>
+          <div className="wt-sidebody">{side(() => setOpen(false))}</div>
+        </aside>
+        <section className="wt-main" aria-label={current}>{children}</section>
+      </div>
+    </div>
+  );
+}
+
+/** One menu row: a label, a quiet second line, and a count or % chip on the right. */
+export function SideItem({ on, onPick, label, sub, chip, dot }: { on: boolean; onPick: () => void; label: string; sub?: string; chip?: ReactNode; dot?: string }): ReactElement {
+  return (
+    <button type="button" className="wt-item" aria-pressed={on} onClick={onPick}>
+      {dot ? <span className="wt-dot" style={{ background: dot }} /> : null}
+      <span className="wt-item__t"><b>{label}</b>{sub ? <small>{sub}</small> : null}</span>
+      {chip}
+    </button>
+  );
+}
+
+/** A count chip for the menu: orange when something waits, grey at zero (or when `quiet`). */
+export const Count = ({ n, tip, quiet }: { n: number; tip?: string; quiet?: boolean }): ReactElement => (
+  <span className={"wt-pct " + (n && !quiet ? "is-mid" : "is-none")} title={tip}>{n}</span>
+);
+
+/** A reply-rate chip: green 40 % and up, orange 15–39 %, red under 15 %, grey before anything is sent. */
+export const RateChip = ({ replied, sent, tip }: { replied: number; sent: number; tip?: string }): ReactElement => {
+  const rate = sent ? Math.round((replied / sent) * 100) : 0;
+  const band = !sent ? "is-none" : rate >= 40 ? "is-good" : rate >= 15 ? "is-mid" : "is-low";
+  return <span className={"wt-pct " + band} title={tip ?? (sent ? `${replied} replies of ${sent} sent` : "Nothing sent yet")}>{sent ? `${rate} %` : "—"}</span>;
+};
+
 /** A message the way it lands in a WhatsApp chat. With `media`, the picture or video sits above the text, as in WhatsApp. */
 export function Bubble({ text, mine = true, meta, media }: { text: string; mine?: boolean; meta?: string; media?: ReactNode }): ReactElement {
   return (
