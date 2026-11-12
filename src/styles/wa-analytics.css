@@ -1,0 +1,94 @@
+/* Marketing -> WhatsApp -> Analytics (wa4, 12 Nov 2026): KPI tiles, the funnel, messages sent each day and the split
+   tables, as the approved board (wx- classes there). Black and greys, orange only on hover and on a warning.
+   The menu, head and buttons are the Templates look (wa-templates.css). */
+
+.wan-body { display: flex; flex-direction: column; padding-bottom: 6px; transition: opacity .15s ease; }
+.wan-body.is-busy { opacity: .55; }
+.wan-loading { padding: 40px 22px; font-size: 13px; color: var(--ink-3); }
+.wan-error { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 18px 22px 0; padding: 10px 12px; border: 1px solid var(--danger-line); border-radius: 12px; background: var(--danger-tint); font-size: 13px; color: var(--danger-ink); }
+
+/* KPI tiles */
+.wan-kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; padding: 18px 22px 0; }
+.wan-kpi { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.wan-kpi span { font-size: 12px; color: var(--ink-3); }
+.wan-kpi b { font-size: 24px; line-height: 30px; letter-spacing: -.5px; font-variant-numeric: tabular-nums; color: var(--ink); }
+.wan-kpi small { font-size: 12px; color: var(--ink-2); }
+.wan-over { color: var(--accent-text); font-weight: 600; }
+
+/* Cards */
+.wan-card { margin: 18px 22px 0; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.wan-cardh { display: flex; align-items: baseline; justify-content: space-between; gap: 6px 12px; flex-wrap: wrap; }
+.wan-cardh h3 { margin: 0; font-size: 15px; font-weight: 700; }
+.wan-cardh span { font-size: 12px; color: var(--ink-3); }
+.wan-take { padding: 10px 12px; border-radius: 12px; background: var(--surface-2); font-size: 13px; line-height: 19px; color: var(--ink-2); }
+.wan-empty { font-size: 13px; color: var(--ink-3); }
+.wan-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.wan-row .wt-btn { min-height: 30px; padding: 0 8px; font-size: 12.5px; }
+
+/* Funnel: one series, bars from one baseline, value at the end of the row */
+.wan-fun { display: flex; flex-direction: column; gap: 8px; }
+.wan-fr { display: grid; grid-template-columns: 120px minmax(0, 1fr) 96px; gap: 12px; align-items: center; font-size: 13px; }
+.wan-fr > span:first-child { color: var(--ink-2); }
+.wan-fr > span:last-child { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink-2); white-space: nowrap; }
+.wan-fr > span:last-child b { color: var(--ink); }
+.wan-ftrack { display: flex; height: 22px; }
+.wan-fbar { height: 22px; border-radius: 0 4px 4px 0; background: var(--ink); min-width: 2px; }
+.wan-fbar:hover, .wan-fbar:focus-visible { background: var(--accent); outline: none; }
+
+/* Messages sent each day: columns <= 24px, 4px rounded tops, square on the baseline */
+.wan-dwrap { position: relative; padding-top: 18px; }
+.wan-dmax { position: absolute; top: 0; left: 0; font-size: 11px; color: var(--ink-4); font-variant-numeric: tabular-nums; }
+.wan-dwrap::before { content: ""; position: absolute; top: 18px; left: 0; right: 0; border-top: 1px dashed var(--line-soft); }
+.wan-days { position: relative; display: flex; align-items: stretch; height: 140px; border-bottom: 1px solid var(--line); }
+.wan-days:focus-visible { outline: 2px solid var(--focus); outline-offset: 4px; border-radius: 4px; }
+.wan-day { flex: 1; min-width: 0; display: flex; align-items: flex-end; justify-content: center; padding: 0 1px; }
+.wan-day i { display: block; width: 100%; max-width: 24px; border-radius: 4px 4px 0 0; background: #3b3b3b; }
+.wan-day i.is-sun { height: 2px; background: var(--line); border-radius: 0; }
+.wan-day i.is-zero { height: 0; }
+.wan-day:hover i:not(.is-sun):not(.is-zero), .wan-day.is-on i:not(.is-sun):not(.is-zero) { background: var(--accent); }
+.wan-day.is-on i.is-sun, .wan-day.is-on i.is-zero { box-shadow: 0 0 0 1px var(--ink-4); height: 2px; }
+.wan-axis { display: flex; justify-content: space-between; gap: 8px; margin-top: -4px; font-size: 11.5px; color: var(--ink-3); }
+
+/* Split tables: name + sub, count, two in-cell bars on 0-100 %, last column */
+.wan-scroll { overflow-x: auto; margin: 0 -16px; padding: 0 16px; }
+.wan-bt { width: 100%; border-collapse: collapse; font-size: 13px; }
+.wan-bt th[scope="col"] { text-align: left; font-size: 11px; font-weight: 600; letter-spacing: .6px; color: var(--ink-3); padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.wan-bt th.num, .wan-bt td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.wan-bt td, .wan-bt th[scope="row"] { padding: 9px 10px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; text-align: left; font-weight: 400; }
+.wan-bt tr:last-child td, .wan-bt tr:last-child th[scope="row"] { border-bottom: 0; }
+.wan-bt th[scope="row"] b { font-weight: 600; color: var(--ink); }
+.wan-bt th[scope="row"] small { display: block; font-size: 12px; color: var(--ink-3); }
+.wan-bt th[scope="col"]:first-child, .wan-bt th[scope="row"], .wan-bt td:first-child { padding-left: 0; }
+.wan-bt th[scope="col"]:last-child, .wan-bt td:last-child { padding-right: 0; }
+.wan-bt tr.is-fold th[scope="row"] b { color: var(--ink-2); }
+.wan-bt.is-plain td { padding: 6px 10px; }
+.wan-ib { display: flex; align-items: center; gap: 8px; min-width: 150px; }
+.wan-ib > div { flex: 1; height: 8px; border-radius: 0 4px 4px 0; background: #efefef; overflow: hidden; }
+.wan-ib i { display: block; height: 100%; background: var(--ink); border-radius: 0 4px 4px 0; }
+.wan-ib i.is-2 { background: #6b6b6b; }
+.wan-ib:hover i { background: var(--accent); }
+.wan-ib span { width: 48px; flex: none; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+.wan-foot { margin: 0; padding-top: 12px; }
+
+/* The one tooltip: value first, label after; text tokens only */
+.wan-tip { position: fixed; z-index: 60; transform: translate(-50%, calc(-100% - 10px)); max-width: 280px; padding: 6px 9px; border-radius: 8px; background: var(--ink); color: var(--on-ink); font-size: 12px; line-height: 16px; font-weight: 600; pointer-events: none; white-space: normal; box-shadow: 0 4px 14px rgba(20, 18, 16, .18); }
+
+/* Narrower main column, then phones (the menu folds: wa-templates.css) */
+@container wt (max-width: 1080px) {
+  .wan-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@container wt (max-width: 760px) {
+  .wan-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 14px 14px 0; }
+  .wan-kpi:last-child { grid-column: 1 / -1; }
+  .wan-kpi { padding: 12px; }
+  .wan-kpi b { font-size: 22px; }
+  .wan-card { margin: 14px 14px 0; padding: 14px; }
+  .wan-scroll { margin: 0 -14px; padding: 0 14px; }
+  .wan-fr { grid-template-columns: 82px minmax(0, 1fr) 76px; gap: 8px; font-size: 12.5px; }
+  .wan-bt { min-width: 560px; }
+  .wan-bt th[scope="row"] { min-width: 132px; }
+  .wan-ib { min-width: 112px; gap: 6px; }
+  .wan-ib span { width: 40px; }
+  .wan-error { margin: 14px 14px 0; }
+  .wan-foot { padding-left: 14px; padding-right: 14px; }
+}
