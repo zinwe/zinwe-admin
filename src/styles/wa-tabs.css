@@ -1,0 +1,116 @@
+/* Marketing -> WhatsApp -> Today, Contacts, Analytics, Settings (wa3, 11 Nov 2026): the Templates look (wa-templates.css,
+   wt- / wc- classes) plus the few parts these tabs need (wtx-). Colours are the admin tokens from base.css. */
+
+/* Sub-headings inside the main column (Today: Replies to answer, Messages to send) */
+.wtx-subh { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 18px 22px 0; flex-wrap: wrap; }
+.wtx-subh h3 { margin: 0; font-size: 15px; font-weight: 700; }
+.wtx-subh span { font-size: 12.5px; color: var(--ink-3); }
+.wtx-subh + .wc-grid, .wtx-subh + .wt-empty { padding-top: 12px; }
+.wtx-pad { padding: 18px 22px; }
+.wtx-stack { display: flex; flex-direction: column; gap: 12px; }
+
+/* A contact card (Today) */
+.wtx-card .wc-chat.wtx-in { min-height: 0; padding-bottom: 12px; }
+.wtx-card .wc-chat.wtx-in .wa-bub { max-width: 92%; font-size: 13.5px; line-height: 19px; box-shadow: 0 1px .5px rgba(11, 20, 26, .13); }
+.wtx-body { display: flex; flex-direction: column; gap: 10px; padding: 12px 16px; min-width: 0; }
+.wtx-body h3 { margin: 0; font-size: 15px; }
+.wtx-card .wa-track { border-color: var(--accent); }
+.wtx-card dl.wc-facts { padding-bottom: 8px; }
+.wtx-draft { display: flex; flex-direction: column; border-top: 1px solid var(--line); margin-top: 4px; }
+.wtx-card .wc-chat.wtx-out { min-height: 0; border-radius: 0; }
+.wtx-by { align-self: flex-end; display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; color: var(--accent-text); max-width: 92%; text-align: right; }
+.wtx-by::before { content: ""; width: 7px; height: 7px; flex: none; border-radius: 2px; background: var(--accent); transform: rotate(45deg); }
+.wtx-bubble { display: flex; flex-direction: column; align-items: flex-end; gap: 0; }
+/* The message itself: a WhatsApp bubble you type into */
+textarea.wtx-edit { display: block; width: 92%; max-width: 92%; min-height: 96px; field-sizing: content; resize: vertical; border: 1px solid transparent; font: inherit; font-size: 13.5px; line-height: 19px; color: #111b21; }
+textarea.wtx-edit:hover { border-color: rgba(20, 18, 16, .12); }
+textarea.wtx-edit:focus { outline: 2px solid var(--focus); outline-offset: 1px; }
+.wtx-bubble .wt-time { width: 92%; }
+.wt-btn.wtx-wa { border-color: var(--accent); background: var(--accent); color: var(--ink); }
+.wt-btn.wtx-wa:hover { background: var(--accent-hover); color: var(--ink); border-color: var(--accent-hover); }
+.wt-btn.wtx-wa[aria-disabled="true"] { pointer-events: none; opacity: .5; }
+.wtx-card .wc-foot { border-top: 1px solid #f0f0f0; padding-top: 12px; gap: 6px; }
+.wtx-card .wc-foot .wt-btn { padding: 0 10px; }
+
+/* What did they say? */
+.wtx-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.wtx-chip { min-height: 34px; padding: 0 12px; border: 1px solid var(--line-2); border-radius: 999px; background: var(--surface); font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.wtx-chip:hover { border-color: var(--ink); color: var(--ink); }
+.wtx-chip.on { border-color: var(--ink); background: var(--ink); color: var(--on-ink); }
+.wtx-chip.is-stop { color: var(--danger); border-color: var(--danger-line); }
+.wtx-chip.is-stop:hover { border-color: var(--danger); background: var(--danger-tint); color: var(--danger-ink); }
+.wtx-card.is-reply { border-color: var(--accent-line); }
+.wtx-form .wtx-body { padding: 16px 18px; gap: 12px; }
+.wtx-form .inp { width: 100%; }
+.wtx-form { max-width: 620px; }
+
+/* The send window, in Today's header */
+.wtx-window { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; font-size: 12px; color: var(--ink-3); }
+.wtx-window > span:first-child { margin-right: 4px; }
+.wtx-slot { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 999px; background: var(--surface-2); color: var(--ink-3); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.wtx-slot.is-now { background: var(--accent-tint); color: var(--accent-text); box-shadow: inset 0 0 0 1px var(--accent-line); }
+
+/* Contacts: dense rows */
+.wtx-tablebox { overflow-x: auto; }
+.mk .tbl.wtx-ctable { min-width: 0; font-size: 13px; }
+.mk .wtx-ctable th, .mk .wtx-ctable td { padding: 9px 10px; }
+.mk .wtx-ctable th:first-child, .mk .wtx-ctable td:first-child { padding-left: 22px; }
+.mk .wtx-ctable th:last-child, .mk .wtx-ctable td:last-child { padding-right: 22px; }
+.wtx-ctable .cobtn { text-align: left; }
+.wtx-ctable .wt-btn { min-height: 30px; padding: 0 10px; font-size: 12.5px; }
+.wtx-ctable .pill { white-space: nowrap; }
+.wtx-ctable th, .wtx-ctable td { white-space: nowrap; }
+.wtx-ell { display: block; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wtx-ctable th[scope="row"] .wtx-ell { max-width: 210px; }
+.wtx-ctable button.wtx-ell { padding: 0; }
+
+/* Analytics: cards */
+.wtx-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; padding: 18px 22px; align-items: start; }
+.wtx-panel.is-wide { grid-column: 1 / -1; }
+.wtx-panelh { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 14px 16px 10px; border-bottom: 1px solid #f0f0f0; flex-wrap: wrap; }
+.wtx-panelh h3 { margin: 0; font-size: 15px; font-weight: 700; }
+.wtx-panelh span { font-size: 12px; color: var(--ink-3); }
+.wtx-panelb { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px 16px; min-width: 0; }
+.wtx-funnel { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.wtx-funnel li { display: flex; flex-direction: column; gap: 5px; }
+.wtx-funnel em { font-style: normal; font-weight: 500; color: var(--ink-3); }
+.wtx-funnel .wt-bar { height: 10px; border-radius: 5px; }
+.wtx-scroll { overflow-x: auto; margin: 0 -16px; }
+.mk .tbl.wtx-tbl { min-width: 560px; font-size: 13px; }
+.mk .wtx-tbl th, .mk .wtx-tbl td { padding: 8px 12px; }
+.mk .wtx-tbl th:first-child, .mk .wtx-tbl td:first-child { padding-left: 16px; }
+.mk .wtx-tbl th:last-child, .mk .wtx-tbl td:last-child { padding-right: 16px; }
+.wtx-panel .fr.between { flex-wrap: wrap; gap: 8px; }
+
+/* Settings */
+.wtx-rules { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; padding: 18px 22px; align-items: start; }
+.wtx-rule { padding: 14px 16px; gap: 6px; }
+.wtx-rule h3 { margin: 0; font-size: 14px; font-weight: 700; }
+.wtx-rule p { margin: 0; font-size: 13.5px; line-height: 20px; color: var(--ink-2); }
+.wtx-slotrow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 4px; }
+.wtx-mode { padding: 14px 16px; gap: 6px; }
+.wtx-mode.is-on { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.wtx-mode.is-dashed { border-style: dashed; box-shadow: none; }
+.wtx-mode.is-dashed h3, .wtx-mode.is-dashed p { color: var(--ink-3); }
+.wtx-modeh { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.wtx-mode h3 { margin: 0; font-size: 14px; font-weight: 700; }
+.wtx-mode p { margin: 0; font-size: 13.5px; line-height: 20px; color: var(--ink-2); }
+
+/* Narrower main column */
+@container wt (max-width: 1200px) {
+  .wtx-ctable .c-wide { display: none; }
+}
+@container wt (max-width: 1080px) {
+  .wtx-cards, .wtx-rules { grid-template-columns: minmax(0, 1fr); }
+}
+/* Phones: the menu folds (wa-templates.css); rows keep the business, Track, Status and Send */
+@container wt (max-width: 760px) {
+  .wtx-subh, .wtx-pad, .wtx-cards, .wtx-rules { padding-left: 14px; padding-right: 14px; }
+  .wtx-ctable .c-opt, .wtx-ctable .c-trk { display: none; }
+  .wtx-ctable th[scope="row"] .wtx-ell { max-width: 150px; }
+  .mk .wtx-ctable th:first-child, .mk .wtx-ctable td:first-child { padding-left: 14px; }
+  .mk .wtx-ctable th:last-child, .mk .wtx-ctable td:last-child { padding-right: 14px; }
+  .wtx-window { width: 100%; }
+  .wa .wtx-panel .wa-bar { grid-template-columns: minmax(0, 1fr) 90px 44px; }
+  textarea.wtx-edit, .wtx-bubble .wt-time { width: 100%; max-width: 100%; }
+}
