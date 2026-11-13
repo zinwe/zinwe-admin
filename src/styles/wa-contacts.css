@@ -1,0 +1,126 @@
+/* Marketing -> WhatsApp -> Contacts (owner's board, 12 Nov 2026). The Templates look (wa-templates.css: wt-) and the
+   campaign panel (wa-campaigns.css: wf-drawer, wf-box, wf-tl) plus the few parts this tab needs (wcx-). Colours are the
+   admin tokens from base.css: black and greys, white surfaces, hairlines, orange only for what needs you. */
+
+.wcx .wt-wrap { position: relative; }
+.wcx .wt-main { min-height: 720px; }
+
+/* The table */
+.wcx-scroll { overflow-x: auto; }
+.wcx-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.wcx-table th { text-align: left; font-size: 11px; font-weight: 600; letter-spacing: .6px; color: var(--ink-3); padding: 10px 10px; border-bottom: 1px solid var(--line); background: #fcfcfc; white-space: nowrap; }
+.wcx-table th:first-child, .wcx-table td:first-child { padding-left: 10px; }
+.wcx-table td { padding: 0; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+.wcx-table tbody tr { cursor: pointer; }
+.wcx-table tbody tr:hover td { background: #fcfcfc; }
+.wcx-table tbody tr.is-on td { background: #f5f5f5; }
+.wcx-cell { display: flex; flex-direction: column; gap: 2px; padding: 10px 10px; line-height: 17px; min-width: 0; }
+.wcx-cell > span, .wcx-cell > small { max-width: 170px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wcx-cell > span { color: var(--ink); }
+.wcx-cell small { font-size: 12px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wcx-c-seg .wcx-cell > span { max-width: 100px; }
+.wcx-c-where .wcx-cell > span, .wcx-c-where .wcx-cell > small { max-width: 160px; }
+.wcx-last > span, .wcx-last > small { max-width: 240px; }
+.wcx-who { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 10px; border: 0; background: transparent; text-align: left; color: var(--ink); }
+.wcx-who > span:last-child { display: flex; flex-direction: column; line-height: 17px; min-width: 0; }
+.wcx-who b { font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px; }
+.wcx-who small { font-size: 12px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px; }
+.wcx-who:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; border-radius: 8px; }
+.wcx-phoneonly, .wcx-cell .wcx-phoneonly { display: none; }
+.wcx-av { width: 32px; height: 32px; flex: none; border-radius: 50%; background: #e3e3e3; color: #404040; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+.wcx-flag { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; color: var(--accent-text); white-space: nowrap; }
+.wcx-cell .wcx-flag { font-size: 12.5px; }
+.wcx-flag i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex: none; }
+.wcx-cell .wt-pill { align-self: flex-start; }
+
+/* The contact panel (wf-drawer from the campaign builder, a little wider) */
+.wcx-panel.wf-drawer { width: 440px; }
+.wcx-dhw { display: flex; gap: 10px; align-items: center; min-width: 0; }
+.wcx-dhw .wcx-av { width: 38px; height: 38px; font-size: 13px; }
+.wcx-blk { display: flex; flex-direction: column; gap: 6px; }
+.wcx-path { display: flex; flex-direction: column; }
+.wcx-ps { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 8px; align-items: start; padding: 5px 0; font-size: 13px; line-height: 18px; color: var(--ink-2); position: relative; }
+.wcx-ps::before { content: ""; position: absolute; left: 9px; top: 17px; bottom: -6px; width: 2px; background: #ececec; }
+.wcx-ps:last-child::before { display: none; }
+.wcx-ps i { position: relative; z-index: 1; width: 12px; height: 12px; margin: 3px 0 0 4px; border-radius: 50%; border: 2px solid #cfcfcf; background: var(--surface); box-sizing: border-box; }
+.wcx-ps.is-done i { background: var(--ink); border-color: var(--ink); }
+.wcx-ps.is-now i { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(242, 106, 10, .18); }
+.wcx-ps.is-now > span { font-weight: 600; color: var(--ink); }
+.wcx-ps > small { font-size: 12px; color: var(--ink-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.wcx-psn { display: block; font-size: 11.5px; color: var(--ink-3); font-weight: 400; }
+.wcx-chat { max-height: 360px; overflow: auto; }
+.wcx-older { align-self: center; border: 0; border-radius: 8px; padding: 3px 10px; background: var(--surface); color: var(--ink-3); font-size: 11.5px; font-weight: 600; box-shadow: 0 1px .5px rgba(11, 20, 26, .13); }
+.wcx-send { display: flex; flex-direction: column; gap: 8px; }
+.wcx-draft { padding: 10px; }
+textarea.wcx-bub { align-self: flex-end; width: 92%; min-height: 110px; resize: vertical; padding: 7px 9px; border: 1px solid transparent; border-radius: 10px 2px 10px 10px; background: #e7f6dd; font: inherit; font-size: 13.5px; line-height: 19px; color: #111b21; box-shadow: 0 1px .5px rgba(11, 20, 26, .13); }
+textarea.wcx-bub:focus { outline: 2px solid var(--focus); outline-offset: 1px; }
+.wcx-acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.wcx-acts a.wt-btn[aria-disabled="true"] { pointer-events: none; opacity: .5; }
+.wcx-optin { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; }
+.wcx-optin .wt-btn { align-self: flex-start; }
+.wcx-more { border-top: 1px solid var(--line); padding-top: 10px; }
+.wcx-more summary { font-size: 12.5px; font-weight: 600; color: var(--ink-2); cursor: pointer; padding: 4px 0; }
+.wcx-morein { display: flex; flex-direction: column; gap: 12px; padding-top: 10px; }
+.wcx-red { color: var(--danger); }
+.wcx-note { font-size: 12.5px; color: var(--ink-3); margin: 0; }
+.wf-df .wcx-note { line-height: 18px; }
+.wcx-panel .wf-danger { white-space: nowrap; }
+
+/* Add contacts: the drop zone and Check each row */
+.wcx-upload { margin: 18px 22px 8px; padding: 28px; border: 1.5px dashed #cfcfcf; border-radius: 16px; background: #fcfcfc; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; color: var(--ink-3); cursor: pointer; }
+.wcx-upload:hover, .wcx-upload.is-over { border-color: var(--ink); }
+.wcx-upload:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
+.wcx-upload b { font-size: 15px; color: var(--ink); }
+.wcx-upload span { font-size: 13px; max-width: 60ch; }
+.wcx-upload .wt-btn { margin-top: 4px; }
+.wcx-upload + .wcx-note, .wcx-upload + .wcx-problem + .wcx-note { padding: 0 22px; }
+.wcx-problem { margin: 8px 22px; font-size: 13px; color: var(--danger); }
+.wcx-subhead { border-bottom: 1px solid var(--line); }
+.wcx-subhead h2 { font-size: 16px; overflow-wrap: anywhere; }
+.wcx-check tbody tr { cursor: default; }
+.wcx-check .wcx-cell > span, .wcx-check .wcx-cell > small { max-width: none; white-space: normal; }
+.wcx-check tbody tr:hover td { background: transparent; }
+.wcx-check tr.is-off .wcx-cell > span:not(.wcx-chk) { color: var(--ink-3); }
+.wcx-rowno { flex-direction: row; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; color: var(--ink-3); }
+.wcx-rowno input { width: 16px; height: 16px; accent-color: var(--ink); margin: 0; }
+.wcx-inp { width: 100%; min-width: 120px; height: 32px; padding: 0 8px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); font-size: 13px; color: var(--ink); }
+.wcx-inp:disabled { background: #f7f7f7; color: var(--ink-3); }
+.wcx-chk { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; white-space: normal; }
+.wcx-chk.is-ok { color: var(--ok); }
+.wcx-chk.is-warn { color: var(--accent-text); }
+.wcx-chk.is-bad { color: var(--danger); }
+.wcx-save { display: flex; align-items: center; gap: 10px; margin: 18px 22px 22px; flex-wrap: wrap; }
+.wcx-save span { font-size: 12.5px; color: var(--ink-3); }
+.wcx-save--in { margin: 4px 0 0; }
+.wcx-one { display: flex; flex-direction: column; gap: 14px; padding: 18px 22px 22px; max-width: 720px; }
+.wcx-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 14px; }
+
+/* Narrower main column: Segment and Last message go first */
+@container wt (max-width: 1240px) {
+  .wcx-c-last { display: none; }
+}
+@container wt (max-width: 1000px) {
+  .wcx-c-seg { display: none; }
+}
+/* Phones: the menu folds; rows keep who (with where on the path under the name) and what goes next */
+@container wt (max-width: 760px) {
+  .wcx-c-where, .wcx-c-trk, .wcx-hide-s { display: none; }
+  .wcx-phoneonly, .wcx-cell .wcx-phoneonly { display: block; }
+  .wcx-who { padding: 10px 8px 10px 4px; gap: 8px; }
+  .wcx-who b, .wcx-who small { max-width: 150px; }
+  .wcx-cell { padding: 10px 8px; }
+  .wcx-cell > span, .wcx-cell > small { max-width: 116px; }
+  .wcx-table th { padding: 10px 8px; }
+  .wcx-table th:first-child, .wcx-table td:first-child { padding-left: 10px; }
+  .wcx-upload { margin: 14px; padding: 20px 14px; }
+  .wcx-inp { min-width: 84px; }
+  .wcx-check .wcx-cell small.wcx-chk { font-size: 12px; }
+  .wcx-upload + .wcx-note, .wcx-upload + .wcx-problem + .wcx-note { padding: 0 14px; }
+  .wcx-save { margin: 14px; }
+  .wcx-one { padding: 14px; }
+  .wcx-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 600px) {
+  .wcx-panel.wf-drawer { width: auto; }
+  .wcx-panel .wf-df .wf-note { display: none; }
+}
