@@ -22,6 +22,8 @@ export interface WaPathPos {
   next_due?: string | null;
   /** The language of their first message (en or hi), when the server sends it. */
   lang?: WaLanguage | "";
+  /** Their campaign's engine: "path" or "slots" (the contact serializer sends it). */
+  engine?: "slots" | "path";
 }
 export type WaContactX = WaContact & WaPathPos;
 
